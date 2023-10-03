@@ -1,0 +1,71 @@
+---
+title: "BIS 448 6.1 MLR"
+output: html_notebook
+---
+
+a) The data should be partitioned into training and validation sets because they serve different purposes when using a model. The training set is used to work with the linear model and the validation set is the actual data set that is used when working with the model. We need the two random data sets in order to see if the model is working correctly. We train the data to reach an expect output and then the model is used on the validation set.
+
+b) MEDV = -0.25048c + 5.13349h +  8.11753r - 27.33591
+c = CRIM
+h = CHAS
+r = RM
+
+```{r b}
+
+housing.df <- read.csv("BostonHousing.csv")
+attach(housing.df)
+
+#partition data
+#60% training, 40% validation
+# set seed for reproducing the partition
+set.seed(123)
+n <- length(MEDV)
+n1 <- floor(n*0.6)
+train.index <- sample(c(1:n), n1)
+housing.train <- housing.df[train.index, ]
+housing.valid <- housing.df[-train.index, ]
+
+
+medv.lm <- lm(MEDV ~ CRIM + CHAS + RM, data = housing.train)
+summary(medv.lm)
+```
+
+c) MEDV = -0.25048(0.1) + 5.13349(0) +  8.11753(6) - 27.33591 = $21,344
+```{r c}
+medv.c <- -0.25048*0.1 + 5.13349*0 +  8.11753*6 - 27.33591
+
+print(paste("The average median price for a 6 room house that does not bound the Charles River, in a town with 0.1 crimes per capita is:", medv.c), quote = FALSE)
+
+```
+
+d p1) TAX and MEDV are likely to be highly correlated because they are both dollar values that measure value of a house. As in, taxes are often based upon price of a house. I don't think INDUS, NOX and TAX will be highly correlated.
+
+```{r}
+housing.df <- read.csv("BostonHousing.csv")
+attach(housing.df)
+
+set.seed(123)
+n <- length(MEDV)
+n1 <- floor(n*0.6)
+train.index <- sample(c(1:n), n1)
+train.df <- housing.df[train.index, ]
+valid.df <- housing.df[-train.index, ]
+
+
+housing2.df <- housing.df[,c("CRIM", "ZN", "INDUS", "CHAS", "NOX", "RM", "AGE", "DIS", "RAD", "TAX", "PTRATIO", "LSTAT","MEDV")]
+housing.cor <- cor(housing2.df)
+housing.cor
+
+#RAD and TAX are highly correlated (over .90), I chose to remove RAD
+housing.df$RAD <- NULL
+
+
+housing.lm.all <- lm(MEDV~., data =train.df)
+library(forecast)
+n = lm(MEDV ~ 1, data = train.df)
+housing.lm.step <- step(n, scope=list(upper=housing.lm.all), data = train.df, direction="both")
+housing.lm.backward <- step(housing.lm.all,  direction="backward")
+housing.lm.upward <- step(n, scope=list(lower=n,upper=housing.lm.all), direction="forward")
+```
+
+

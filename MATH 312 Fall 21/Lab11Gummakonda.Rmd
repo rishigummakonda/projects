@@ -1,0 +1,33 @@
+---
+title: "Lab11"
+author: "Rishi Gummakonda"
+date: "10/7/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+```{r}
+m <- 1000
+g <- function(x)
+  {
+  exp(-x)/(1+x^2)*I(x>=0)*I(x<=Inf)
+}
+x <- rexp(m,1)
+fg <- g(x)/exp(-x)
+theta.hat <- mean(fg)
+se <- sd(fg)
+
+```
+
+```{r}
+print(theta.hat)
+
+print(se)
+```
+

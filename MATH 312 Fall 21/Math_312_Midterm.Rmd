@@ -1,0 +1,53 @@
+---
+title: "Math 312 Midterm"
+author: 
+output: pdf_document
+---
+
+## Question 1
+
+```{r}
+
+```
+
+
+## Question 2
+
+```{r}
+
+```
+
+
+## Question 3
+
+```{r}
+
+```
+
+
+## Question 4
+
+```{r}
+
+```
+
+
+## Question 5
+
+```{r}
+
+```
+
+## Question 6
+
+```{r}
+
+```
+
+
+## Question 7
+
+```{r}
+
+```
+

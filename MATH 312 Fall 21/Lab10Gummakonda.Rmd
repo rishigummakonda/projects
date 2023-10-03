@@ -1,0 +1,58 @@
+---
+title: "Lab10Gummakonda"
+author: "Rishi Gummakonda"
+date: "10/5/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+
+
+```{r }
+n <- 1000
+x <- runif(n, min=0, max=0.8) 
+y <- (x^2)*(exp(-x)) 
+theta.hat <- mean(y)*(0.8)
+# monte carlo estimate 
+print(theta.hat)
+
+ # variance
+v <- mean((y-mean(y))^2)/n
+print(v)
+
+```
+
+## Question 2
+
+```{r}
+
+# simple monte carlo estimate
+m <- 1000
+x <- runif(m)
+y <- (sin(x)^2)*(x^3) 
+theta.hat <- mean(y)
+# print simple estimate 
+print(theta.hat)
+
+# antithetic variate approach
+u <- runif(m/2)
+y1 <- (sin(u)^2)*(u^3)
+y2 <- (sin(1-u)^2)*((1-u)^3)
+y3 <- (y1+y2)/2
+theta2.hat <- mean(y3)
+# print estimate using antithetic variate approach 
+print(theta2.hat)
+
+#percent reduction
+
+print((var(y)-var(y3))/var(y))
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

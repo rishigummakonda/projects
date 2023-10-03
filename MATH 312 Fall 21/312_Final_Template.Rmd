@@ -1,0 +1,2005 @@
+---
+title: "312 Final Template"
+author: "Hamza Ali"
+date: "12/9/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Week 4 (9.13 - 9.19): Generate random variables I
+
+```{r}
+#=====================================#
+#=== Generating Random Variables I ===#
+#=====================================#
+
+#-------------------------------#
+#--- Build in Functions in R ---#
+#-------------------------------#
+
+# Details about the default random number generator in R
+help(.Random.seed)
+help(RNGkind)
+
+# Replication: set.seed 
+set.seed(2021)
+n <- 10
+runif(n)
+
+# Uniform pseudo-random number generator in R
+n <- 10
+X1 <- runif(n)
+X1
+
+a <- 2
+b <- 10
+X2 <- runif(n,a,b)
+X2
+
+n <- 3
+m <- 4
+Y <- matrix(runif(n*m),nrow=n,ncol=m)
+Y
+
+# Sampling from a finite distribution
+# Example 3.1
+# toss some coins
+sample(0:1,size=10, replace = T)
+
+# choose some lottery numbers
+sample(1:100,size=6, replace=F)
+
+# permutation of letters a-z
+sample(letters)
+
+# sample from a multinomial distribution
+x <- sample(1:3, size=100, replace = T, prob=c(.2, .3, .5))
+table(x)
+
+#---------------------------------------------#
+#--- Check the implementation of algorithm ---#
+#---------------------------------------------#
+
+# check method: histogram
+x <- rnorm(100)
+hist(x,freq=F)
+curve(dnorm(x),col=2,add=T)
+
+# check method: density curves
+x <- rnorm(100)
+curve(dnorm(x),from=-4,to=4)
+lines(density(x),col=2)
+
+# check method: qq norm
+x <- rnorm(100)
+qqnorm(x)
+
+x <- rexp(100,rate=2)
+qqnorm(x)
+
+x <- rchisq(100, df=2)
+qqnorm(x)
+
+#--------------------------------#
+#--- Inverse Transform Method ---#
+#--------------------------------#
+
+# Example 3.2
+n <- 1000
+u <- runif(n)
+x <- u^(1/3)
+hist(x, prob=T)
+y <- seq(0,1, 0.01)
+lines(y,3*y^2)
+
+# Example 3.3
+exp.generate <- function(n,lambda){
+  -log(runif(n))/lambda
+}
+
+lambda <- 2
+x <- exp.generate(n,2)
+hist(x, prob=T)
+curve(dexp(x,rate=2),add=T,col=2)
+
+# Example 3.4
+n <- 1000
+p <- 0.4
+u <- runif(n)
+x <- as.integer(u > 0.6)
+
+mean(x)
+p
+var(x)
+p*(1-p)
+
+
+# Example 3.5
+n <- 1000
+p <- 0.25
+u <- runif(n)
+k <- ceiling(log(1-u)/log(1-p))-1
+
+mean(k) 
+(1-p)/p
+var(k)
+(1-p)/p^2
+
+
+# U and 1-U have the same distribution
+# the probability that log(1-u)/log(1-p) equals an interger is 0
+
+k <- floor(log(u)/log(1-p))
+mean(k) 
+(1-p)/p
+var(k)
+(1-p)/p^2
+
+# Example 3.6
+rlogarithmic <- function(n, theta){
+  #returns a random logarithmic(theta) sample size n
+  u <- runif(n)
+  #set the initial length of cdf vector
+  N <- ceiling(-16/log10(theta))
+  k <- 1:N
+  a <- -1/log(1-theta)
+  fk <- exp(log(a)+k*log(theta)-log(k))
+  Fk <- cumsum(fk)
+  x <- integer(n)
+  for(i in 1:n){
+    x[i] <- as.integer(sum(u[i]>Fk)) #F^{-1}(u)-1
+    while(x[i]==N){
+      #if x==N we need to extend the cdf
+      #very unlikely because N is large
+      logf <- log(a) + (N+1)*log(theta) - log(N+1)
+      fk <- c(fk,exp(logf))
+      Fk <- c(Fk,Fk[N]+fk[N+1])
+      N <- N+1
+      x[i] <- as.integer(sum(u[i])>Fk)
+    }
+  }
+  x+1
+}
+
+# Generate random samples from a Logarithmic(0.5) distribution.
+n <- 1000
+theta <- 0.5
+x <- rlogarithmic(n,theta)
+# compute density of logarithmic(theta) for comparison
+k <- sort(unique(x))
+p <- -1/log(1-theta)*theta^k/k
+se <- sqrt(p*(1-p)/n) # standard error
+
+round(rbind(table(x)/n,p,se),3)
+
+#------------------------------#
+#--- Transformation Methods ---#
+#------------------------------#
+# Example 3.8
+n <- 1000
+a <- 3
+b <- 2
+u <- rgamma(n,shape = a, rate=1)
+v <- rgamma(n,shape = b, rate=1)
+x <- u/(u+v)
+
+# QQ plot
+q <- qbeta(ppoints(n),a,b)
+qqplot(q,x,cex=0.25, xlab="Beta(3,2)", ylab="Sample")
+abline(0,1)
+
+# Example 3.9
+n <- 1000
+theta <- 0.5
+u <- runif(n)
+v <- runif(n)
+x <- floor(1+log(v)/log(1-(1-theta)^u))
+k <- 1:max(x)
+p <- -1/log(1-theta)*theta^k/k
+se <- sqrt(p*(1-p)/n)
+p.hat <- tabulate(x)/n
+
+print(round(rbind(p.hat,p,se),3))
+```
+
+## Week 5 (9.20 - 9.26): Generate random variables II
+
+```{r}
+#======================================#
+#=== Generating Random Variables II ===#
+#======================================#
+
+#-----------------------------------#
+#--- Acceptance-rejection method ---#
+#-----------------------------------#
+
+# Example 3.7
+
+n <- 1000
+k <- 0         #counter for accepted
+j <- 0         #iterations
+y <- numeric(n)
+
+while(k < n){
+  u <- runif(1)
+  j <- j+1
+  x <- runif(1) # random variate from g
+  if(x*(1-x)>u){
+    #we accept x
+    k <- k+1
+    y[k] <- x
+  }
+}
+
+j
+
+#compare empirical and theoretical percentiles
+p <- seq(.1, .9, .1)
+Qhat <- quantile(y,p) #quantile of sample
+Q <- qbeta(p,2,2)     #theoretical quantiles
+se <- sqrt(p*(1-p)/(n*dbeta(Q,2,2)^2)) #see Ch.2
+
+round(rbind(Qhat,Q,se),3)
+
+# Example 3.7 continue
+curve(dbeta(x,2,2),xlim=c(0,1),ylim=c(0,6))
+curve(6*dunif(x),add=T)
+curve(1.3*dnorm(x,1/2,1/4),add=T)
+
+#Use g'(x) from N(0.5,0.25) instead
+
+n <- 1000
+k <- 0         #counter for accepted
+j <- 0         #iterations
+y <- numeric(n)
+
+ratio <- function(x){
+  f <- 6*x*(1-x)
+  g <- dnorm(x,0.5,0.25)
+  f/(1.3*g)
+}
+
+
+while(k < n){
+  u <- runif(1)
+  j <- j+1
+  x <- rnorm(1,0.5,0.25) # random variate from g'
+  if(ratio(x)>u){
+    #we accept x
+    k <- k+1
+    y[k] <- x
+  }
+}
+
+j
+
+p <- seq(.1, .9, .1)
+Qhat <- quantile(y,p) #quantile of sample
+Q <- qbeta(p,2,2)     #theoretical quantiles
+se <- sqrt(p*(1-p)/(n*dbeta(Q,2,2)^2)) #see Ch.2
+
+round(rbind(Qhat,Q,se),3)
+
+#=================#
+#===== LAB 7 =====#
+#=================#
+
+## Example 1
+rwei <- function(n,a,b){
+  X <- runif(n)
+  Y <- a*(-log(1-X))^{1/b}
+  Y
+}
+
+dwei <- function(x,a,b){
+  b/a^b*x^(b-1)*exp(-(x/a)^b)
+}
+
+n <- 1000
+X <- rwei(n,2,2)
+hist(X,prob=T)
+curve(dwei(x,2,2),add=T,col=2)
+
+## Example 2
+pmf <- c(0.1,0.2,0.3,0.4)
+cdf <- cumsum(pmf)
+
+U <- runif(n)
+X <- numeric(n)
+for(i in 1:n){
+  if (0 < U[i] & U[i] < 0.1) X[i]=1
+  else if (0.1 <= U[i] & U[i] < 0.3) X[i]=2
+  else if (0.3 <= U[i] & U[i] < 0.6) X[i]=3
+  else X[i]=4
+}
+
+hat.p <- table(X)/n
+hat.p
+
+# Use sample for finite discrete distribution
+sample(1:4,n,replace=T,prob=c(0.1,0.2,0.3,0.4))
+
+## Example 3
+n <- 10000
+rpareto <- function(n,lambda,kappa){
+  Y <- runif(n)
+  X <- lambda*Y^{-1/kappa}
+  X
+}
+
+dpareto <- function(x,lambda,kappa){
+  kappa*lambda^kappa/(x^(kappa+1))
+}
+
+X <- rpareto(n,4,100)
+hist(X,prob=T)
+curve(dpareto(x,4,100),add=T,col=2)
+
+## Example 4
+dtri <- function(x,a,m,b){
+  f1 <- 2*(x-a)/((b-a)*(m-a))
+  f2 <- 2*(b-x)/((b-a)*(b-m))
+  f <- f1*I(a<x)*I(x<m)+f2*I(m<=x)*I(x<b)
+  f
+}
+
+curve(dtri(x, 0, 1/3, 1))
+
+# g(x) = 1/(b-a) from uniform (a,b) distribution
+# f(x)/g(x)<= (b-a)*max_xf(x) = 2 
+# c=2
+# f(x)/c*g(x)=(b-a)*f(x)/2
+
+n <- 1000
+
+rtri <- function(n,a,m,b){
+  k <- 0 # counter for accepted value
+  y <- numeric(n) # vector to store accepted value
+  while(k < n){
+  u <- runif(1)
+  x <- runif(1,a,b) # g(x) = uniform(a,b)
+  if(u < (b-a)*dtri(x,a,m,b)/2) {
+    k <- k+1
+    y[k] <- x
+    }
+  }
+  y
+}
+
+Y <- rtri(n,0,1/3,1)
+hist(Y,prob=T)
+abline(v=1/3)
+```
+
+## Week 6 (9.27 - 10.3): Monte Carlo Integration
+
+```{r}
+#===============================#
+#=== Monte Carlo Integration ===#
+#===============================#
+
+# Example 6.1
+m <- 10000
+x <- runif(m)
+theta.hat <- mean(exp(-x))
+print(theta.hat)
+print(1 - exp(-1))
+
+# Example 6.2
+m <- 10000
+x <- runif(m, min=2, max=4)
+theta.hat <- mean(exp(-x))*2
+print(theta.hat)
+print(exp(-2)-exp(-4))
+
+# Example 6.3 Approach 1
+x <- seq(0.1, 2.5, length = 10)
+m <- 10000
+u <- runif(m)
+cdf <- numeric(length(x))
+for (i in 1:length(x)){
+  g <- x[i]*exp(-(u*x[i])^2/2)
+  cdf[i] <- mean(g)/sqrt(2*pi)+0.5
+}
+
+Phi <- pnorm(x)
+print(round(rbind(x,cdf,Phi),3))
+
+# Example 6.3 Approach 2
+x <- seq(0.1, 2.5, length = 10)
+m <- 10000
+cdf <- numeric(length(x))
+for (i in 1:length(x)){
+  u <- runif(m,0,x[i])
+  g <- exp(-(u)^2/2)
+  cdf[i] <- x[i]*mean(g)/sqrt(2*pi)+0.5
+}
+
+Phi <- pnorm(x)
+print(round(rbind(x,cdf,Phi),3))
+
+# Example 6.4
+x <- seq(0.1, 2.5, length = 10)
+m <- 10000
+z <- rnorm(m)
+cdf <- numeric(length(x))
+for(i in 1:length(x)){
+  cdf[i] <- mean(z < x[i])
+}
+
+Phi <- pnorm(x)
+print(round(rbind(x,cdf,Phi),3))
+
+
+```
+
+## Week 7 (10.4 - 10.10): Variance Reduction
+
+```{r}
+#====================#
+#=== Week 6 Lab 9 ===#
+#====================#
+## Question 1
+# Generate m random variable from Uniform(a,b)
+m <- 1000
+U <- runif(m,0,pi)
+
+# Calculate the function of U, g(U)
+g <- function(x){
+  (cos(x)^2+sin(x))/(2+x^2)
+}
+
+Y <- g(U)
+
+(theta_hat <- pi*mean(Y))
+
+## Question 2
+# We generate m random variable from N(0,1)
+# f(x)=1/sqrt(2*pi)*exp(-x^2/2)
+# g(x)=x^3
+# theta=E(g(X)), where X from N(0,1)
+
+# Generate m random variable from N(0,1)
+m <- 10000
+X <- rnorm(m)
+
+# Calculate the function of X, g(X)
+Y <- X^3
+
+(theta_hat <- mean(Y))
+
+#====================#
+#=== Week 6 Lab 8 ===#
+#====================#
+## Question 1
+# Generate m random variable from Uniform(0,1)
+m <- 1000
+U <- runif(m)
+Y <- sin(U)*exp(-U/3)
+(theta_hat <- mean(Y))
+
+# Estimation of Variance
+(v <- mean((Y-mean(Y))^2)/m)
+
+# Estimate Variance using Simulations
+n <- 1000
+theta <- integer(n)
+for(i in 1:n){
+  U <- runif(m)
+  Y <- sin(U)*exp(-U/3)
+  theta[i] <- mean(Y)
+}
+
+(v <- var(theta))
+
+#=================================#
+#=== Antithetic Variate Method ===#
+#=================================#
+# Example: Lab 8 Question 
+# Compare simple MC method and antithetic variate method
+n <- 1000
+theta1 <- integer(n)
+theta2 <- integer(n)
+for (i in 1:n){
+  # estimate theta using the basic MC method
+  U1 <- runif(m)
+  theta1[i] <- mean(sin(U1)*exp(-U1/3))
+  # estimate theta using antithetic method
+  U2 <- runif(m/2)
+  Y1 <- sin(U2)*exp(-U2/3)
+  Y2 <- sin(1-U2)*exp(-(1-U2)/3)
+  theta2[i] <- mean((Y1+Y2)/2)
+}
+
+# compare the efficiency of these estimates
+print(var(theta1))
+print(var(theta2))
+# percent reduction in variance
+print((var(theta1)-var(theta2))/var(theta1))
+
+# Example 6.6
+# Basic Monte Carlo Integration
+MC.Basic <- function(x,m=10000){
+  u <- runif(m)
+  g <- x*exp(-(u*x)^2/2)
+  cdf <- mean(g)
+  cdf
+}
+
+# Antithetics variables
+MC.Anti <- function(x,m=10000){
+  u <- runif(m/2)
+  y1 <- x*exp(-(u*x)^2/2)
+  y2 <- x*exp(-((1-u)*x)^2/2)
+  mean((y1+y2)/2)
+}
+
+# Compare estimates
+x <- seq(0.1, 2.5, length=5)
+Phi <- pnorm(x)
+set.seed(123)
+MC1 <- integer(length(x))
+MC2 <- integer(length(x))
+for(i in 1:length(x)){
+  MC1[i] <- MC.Basic(x[i])/(sqrt(2*pi))+0.5
+  MC2[i] <- MC.Anti(x[i])/(sqrt(2*pi))+0.5
+}
+
+print(round(rbind(x,MC1,MC2,Phi),5))
+
+# Compare the variance 
+n <- 1000
+MC1 <- integer(n)
+MC2 <- integer(n)
+x <- 1.95
+for(i in 1:n){
+  MC1[i] <- MC.Basci(x)
+  MC2[i] <- MC.Anti(x)
+}
+
+print(sd(MC1))
+print(sd(MC2))
+print((var(MC1)-var(MC2))/var(MC1))
+
+#=====================#
+#=== Week 7 Lab 10 ===#
+#=====================#
+## Question 1
+m <- 1000
+u <- runif(m,0,0.8)
+g <- u^2*exp(-u)
+(theta_hat <- 0.8*mean(g))
+
+# Estimate variance
+# theta_hat = 0.8*mean(g)
+# var(theta_hat))=(0.8)^2*var(g)/m
+(v <- 0.8^2*mean((g-mean(g))^2)/m)
+
+# Estimate via simulation
+n <- 1000
+theta_hat <- integer(n)
+for(i in 1:n){
+  u <- runif(m,0,0.8)
+  g <- u^2*exp(-u)
+  theta_hat[i] <- 0.8*mean(g)
+}
+(v <- var(theta_hat))
+
+## Question 2
+# Simple Monte Carlo estimate
+m <- 1000
+u <- runif(m)
+g <- sin(u)^2*u^3
+(theta1 <- mean(g))
+
+# Antithetic variate approach
+m <- 1000
+u <- runif(m/2)
+g1 <- sin(u)^2*u^3
+g2 <- sin(1-u)^2*(1-u)^3
+(theta2 <- mean((g1+g2)/2))
+
+# Compare the variance
+n <- 1000
+MC1 <- integer(n)
+MC2 <- integer(n)
+for(i in 1:n){
+  # simple MC method
+  u <- runif(m)
+  g <- sin(u)^2*u^3
+  MC1[i] <- mean(g)
+  # antithetic variate approach
+  u <- runif(m/2)
+  g1 <- sin(u)^2*u^3
+  g2 <- sin(1-u)^2*(1-u)^3
+  MC2[i] <- mean((g1+g2)/2)
+}
+
+var(MC1)
+var(MC2)
+100*(var(MC1)-var(MC2))/var(MC1)
+
+#===========================#
+#=== Importance Sampling ===#
+#===========================#
+# Example 6.11
+m <- 10000
+# vectors to record estimation and standard error
+theta.hat <- numeric(5)
+se <- numeric(5)
+
+# define the integrand
+g <- function(x){
+  exp(-x)/(1+x^2)*I(x>=0)*I(x<=1)
+}
+
+# observe the importance functions in Example 6.11
+f3 <- function(x){
+  exp(-x)/(1-exp(-1))
+}
+
+f4 <- function(x){
+  4*(1+x^2)^(-1)/pi
+}
+
+par(mfrow=c(1,2))
+curve(g(x),ylim=c(0,2),col=1,ylab="")
+curve(dunif(x),add=T,lty=2,col=2)
+curve(dexp(x,1),add=T,lty=3,col=3)
+curve(dcauchy(x),add=T,lty=4,col=4)
+curve(f3,add=T,lty=5,col=5)
+curve(f4,add=T,lty=6,col=6)
+legend("topright",legend = c("g","f0","f1","f2","f3","f4"),col=1:6,lty=1:6)
+
+curve(g(x)/dunif(x), ylim=c(0,3.5), ylab="",lty=2, col=2)
+curve(g(x)/dexp(x,1),add=T,lty=3,col=3)
+curve(g(x)/dcauchy(x),add=T,lty=4,col=4)
+curve(g(x)/f3(x),add=T,lty=5,col=5)
+curve(g(x)/f4(x),add=T,lty=6,col=6)
+legend("topright",legend = c("g/f0", "g/f1","g/f2","g/f3", "g/f4"),col=2:6, lty=2:6)
+par(mfrow=c(1,1))
+
+# Importance sampling using different importance function
+x <- runif(m) # using f0
+fg <- g(x)
+theta.hat[1] <- mean(fg)
+se[1] <- sd(fg)
+
+x <- rexp(m,1) # using f1
+fg <- g(x)/exp(-x)
+theta.hat[2] <- mean(fg)
+se[2] <- sd(fg)
+
+x <- rcauchy(m) # using f2
+i <- c(which(x>1), which(x<0))
+x[i] <- 2 # to catch overflow errors in g(x)
+fg <- g(x)/dcauchy(x)
+theta.hat[3] <- mean(fg)
+se[3] <- sd(fg)
+
+u <- runif(m) # using f3, inverse transform method
+x <- -log(1-u*(1-exp(-1)))
+fg <- g(x)/(exp(-x)/(1-exp(-1)))
+theta.hat[4] <- mean(fg)
+se[4] <- sd(fg)
+
+u <- runif(m) # using f4, inverse transform method
+x <- tan(pi*u/4)
+fg <- g(x)/(4/((1+x^2)*pi))
+theta.hat[5] <- mean(fg)
+se[5] <- sd(fg)
+
+rbind(theta.hat,se/sqrt(m))
+```
+
+## Week 9 & 10 (10.18 - 10.27): Monte Carlo Method in Inference
+
+```{r}
+#===========================================#
+#=== Monte Carlo Methods for Estimation ===#
+#===========================================#
+
+## Example 7.1 (Basic Monte Carlo Estimation)
+m <- 1000
+g <- numeric(m)
+for(i in 1:m){
+  x1 <- rnorm(1)
+  x2 <- rnorm(1)
+  g[i] <- abs(x1-x2)
+}
+(est <- mean(g))
+
+## Example 7.2 (Estimating the MSE of a trimmed mean)
+m <- 1000 # number of replicates
+n <- 20 # number of sample size
+tmean <- numeric(m)
+for(i in 1:m){
+  x <- sort(rnorm(n))
+  tmean[i] <- sum(x[2:(n-1)])/(n-2)
+}
+(mse <- mean(tmean^2))
+
+## Example 7.4 (Confidence Interval for Variance)
+n <- 20
+alpha <- 0.05
+x <- rnorm(n, mean=0, sd=2)
+UCL <- (n-1*var(x))/qchisq(alpha,df=n-1)
+
+## Example 7.5 (MC estimate of confidence interval)
+n <- 20
+alpha <- 0.05
+UCL <- replicate(1000, expr = {
+  x <- rnorm(n,mean=0,sd=2)
+  (n-1)*var(x)/qchisq(alpha,df=n-1)
+})
+# count the number of intervals that contain sigma^2=4
+# (0, UCL) contain sigma^2=4 if UCL >4
+sum(UCL >4)
+# Empirical confidence level
+sum(UCL >4)/1000
+# or compute the mean to get the confidence level
+mean(UCL > 4)
+
+# the expression argument (expr) can be a function call
+calcCI <- function(n, alpha){
+  y <- rnorm(n,mean=0,sd=2)
+  return((n-1)*var(y)/qchisq(alpha, df=n-1))
+}
+UCL <- replicate(1000,expr=calcCI(n=20,alpha=0.05))
+
+## Example 7.6 (Empirical confidence level)
+n <- 20
+alpha <- 0.05
+UCL <- replicate(1000, expr = {
+  x <- rchisq(n,df=2)
+  (n-1)*var(x)/qchisq(alpha,df=n-1)
+})
+
+sum(UCL >4)
+
+mean(UCL > 4)
+
+## t.test function
+n <- 20
+x <- rnorm(n,mean=2)
+result <- t.test(x,mu=1)
+result$statistic
+result$parameter
+result$p.value
+result$conf.int
+result$estimate
+
+## Example 7.7 (Empirical Type I Error Rate)
+n <- 20
+alpha <- 0.05
+mu0 <- 500
+sigma <- 100
+
+m <- 10000  #number of replicates
+p <- numeric(m)  #storage for p-value
+for (j in 1:m){
+  x <- rnorm(n, mu0, sigma)
+  ttest <- t.test(x, alternative = "greater", mu=mu0)
+  p[j] <- ttest$p.value
+}
+
+p.hat <- mean(p < alpha)
+se.hat <- sqrt(p.hat*(1-p.hat)/m)
+print(c(p.hat,se.hat))
+
+## Example 7.9 (Empirical Power)
+n <- 20
+m <- 1000
+mu0 <- 500
+sigma <- 100
+mu <- seq(450,650,10) #alternatives
+M <- length(mu)
+power <- numeric(M)
+for( i in 1:M ){
+  mu1 <- mu[i]
+  pvalues <- replicate(m, expr = {
+    #simulate under alternative mu1
+    x <- rnorm(n,mean=mu1,sd=sigma)
+    ttest <- t.test(x,alternative="greater",mu=mu0)
+    ttest$p.value
+  })
+  power[i] <- mean(pvalues <= .05)
+}
+se <- sqrt(power*(1-power)/m)
+
+# plot the empirical power curve
+# adding vertical error bars at pi(theta) +/- 2se(pi(theta))
+
+library(ggplot2)
+df <- data.frame(mean=mu, power=power, upper=power+2*se, lower=power-2*se)
+ggplot(df,aes(x=mean,y=power)) +
+  geom_line()+
+  geom_vline(xintercept=500,lty=2) +
+  geom_hline(yintercept=c(0,.05),lty=1:2) +
+  geom_errorbar(aes(ymin=lower, ymax=upper), width=0.2, lwd=1.5)
+
+#=====================#
+#=== Week 9 Lab 12 ===#
+#=====================#
+
+# Question 1 
+m <- 1000
+x1 <- rnorm(m,4,1)
+x2 <- rexp(m,2)
+g <- x1+x2^2
+(theta_hat <- mean(g))
+
+# Question 2
+n <- 20
+m <- 1000
+tmean <- numeric(m)
+for (i in 1:m){
+  x <- sort(rnorm(n))
+  tmean[i] <- sum(x[3:(n-2)])/(n-4)
+}
+mse <- mean(tmean^2)
+
+mse
+
+# Question 3
+n <- 20
+alpha <- 0.05
+# we can use for loop or replicate function as example 7.6
+m <- 1000
+UCL <- numeric(m)
+for(i in 1:m){
+  x <- rexp(n,1/2)
+  UCL[i] <- (n-1)*var(x)/qchisq(alpha,df= n-1)
+}
+
+# the true value is still 4 in this case
+mean(UCL > 4)
+
+#==========#
+#= LAB 13 =#
+#==========#
+
+## Question 1
+# Define the density function of Rayleigh distribution
+f <- function(x,lambda,mu,nu){
+  power <- -(nu+1)/2
+  base <- 1+(lambda*(x-mu)^2)/nu
+  base^power
+}
+
+m <- 10000
+lambda <- 4
+mu <- 3
+nu <- 5
+x <- numeric(m)
+x[1] <- rnorm(1,0,0.5) # the initial value can be chosen differently
+k <- 0
+u <- runif(m)
+for(i in 2:m){
+  xt <- x[i-1]
+  y <- rnorm(1,mean=xt,sd=0.5)
+  num <- f(y,lambda,mu,nu)*dnorm(xt,mean=y,sd=0.5)
+  den <- f(xt,lambda,mu,nu)*dnorm(y,mean=xt,sd=0.5)
+  if (u[i]<= num/den) x[i] <- y
+  else {
+    x[i] <- xt
+    k <- k+1 # y is rejected
+  }
+}
+
+# Check how many y rejected
+print(k)
+
+# Check the distribution with histogram
+b <- 2001 # discard the burnin sample
+y <- x[b:m]
+
+# Compare the shape of histogram with the f(x)
+par(mfrow=c(2,1))
+hist(y)
+curve(f(x,4,3,5),from=0,to=5)
+```
+
+## Week 10 (10.28 - 10.31): Markov Chain Monte Carlo Methods
+
+```{r}
+#================================#
+#=== Markov Chain Monte Carlo ===#
+#================================#
+# Example 7.11
+# Define the density function of Rayleigh distribution
+f <- function(x,sigma){
+  if(any(x<0)) return(0)
+  stopifnot(sigma >0 )
+  return((x/sigma^2)*exp(-x^2/(2*sigma^2)))
+}
+
+m <- 10000
+sigma <- 4
+x <- numeric(m)
+x[1] <- rchisq(1,df=1)
+k <- 0
+u <- runif(m)
+for(i in 2:m){
+  xt <- x[i-1]
+  y <- rchisq(1,df=xt)
+  num <- f(y,sigma)*dchisq(xt,df=y)
+  den <- f(xt,sigma)*dchisq(y,df=xt)
+  if (u[i]<= num/den) x[i] <- y
+  else {
+    x[i] <- xt
+    k <- k+1 # y is rejected
+  }
+}
+
+# Check how many y rejected
+print(k)
+
+# Plot the Markov chain x
+plot(x, type="l")
+
+# display a partial plot starting at index 5000:5500
+index <- 5000:5500
+y1 <- x[index]
+plot(index,y1,type="l", main="", ylab="x")
+
+# Check the distribution with QQ plot
+b <- 2001 # discard the burnin sample
+y <- x[b:m]
+a <- ppoints(100)
+QR <- sigma*sqrt(-2*log(1-a)) #quantiles of Rayleigh, check page 303
+Q <- quantile(y,a)
+
+qqplot(QR, Q, main="", cex=0.5, 
+       xlab="Rayleigh Quantiles", ylab="Sample Quantiles")
+abline(0,1)
+
+hist(y,breaks="scott", main="", xlab="",freq=F)
+lines(QR,f(QR,4))
+
+#======================#
+#=== Week 10 Lab 14 ===#
+#======================#
+
+## Question 1
+# Define the density function of Rayleigh distribution
+f <- function(x,lambda,mu,nu){
+  power <- -(nu+1)/2
+  base <- 1+(lambda*(x-mu)^2)/nu
+  base^power
+}
+
+m <- 10000
+lambda <- 4
+mu <- 3
+nu <- 5
+x <- numeric(m)
+x[1] <- rnorm(1,0,0.5) # the initial value can be chosen differently
+k <- 0
+u <- runif(m)
+for(i in 2:m){
+  xt <- x[i-1]
+  y <- rnorm(1,mean=xt,sd=0.5)
+  num <- f(y,lambda,mu,nu)*dnorm(xt,mean=y,sd=0.5)
+  den <- f(xt,lambda,mu,nu)*dnorm(y,mean=xt,sd=0.5)
+  if (u[i]<= num/den) x[i] <- y
+  else {
+    x[i] <- xt
+    k <- k+1 # y is rejected
+  }
+}
+
+# Check how many y rejected
+print(k)
+
+# Check the distribution with histogram
+b <- 2001 # discard the burnin sample
+y <- x[b:m]
+
+# Compare the shape of histogram with the f(x)
+par(mfrow=c(2,1))
+hist(y)
+curve(f(x,4,3,5),from=0,to=5)
+```
+
+## Week 11 (11.1 - 11.7): Bootstrap I and II
+
+```{r}
+#=== Empirical Distribution Function ===#
+# Use the iris in R as an example
+iris 
+F <- ecdf(iris$Sepal.Length)
+F(0)
+F(6)
+length(iris$Sepal.Length)
+sort(iris$Sepal.Length)
+plot(F)
+
+#=== Bootstrap Estimation of Standard Error ===#
+install.packages("bootstrap")
+
+##Example 8.2
+library(bootstrap) # for the law data
+
+print(cor(law$LSAT,law$GPA))
+
+print(cor(law82$LSAT,law82$GPA))
+
+#set up the bootstrap
+B <- 200        #number of replicates
+n <- nrow(law)  #sample size
+R <- numeric(B) # storage for replicates
+
+#bootstrap estimate of standard error of R
+for (b in 1:B){
+  #randomly select the indices
+  i <- sample(1:n,size=n, replace = T)
+  LSAT <- law$LSAT[i] #i is a vector of indices
+  GPA <- law$GPA[i]
+  R[b] <- cor(LSAT, GPA)
+}
+
+#output
+print(se.R <- sd(R))
+hist(R,prob=T)
+
+## Example 8.3
+# use boot function in boot library
+install.packages("boot")
+library(boot)
+help("boot")
+
+r <- function(x, i){
+  # want correlation of columns 1 and 2
+  cor(x[i,1],x[i,2])
+}
+
+obj <- boot(data=law, statistic = r, R=2000)
+obj
+
+y <- obj$t
+sd(y)
+
+help(bootstrap)
+
+## Example 8.4
+# sample estimate for n=15
+theta.hat <- cor(law$LSAT,law$GPA)
+
+# bootstrap estimate of bias
+B <- 2000 #larger for estimating bias
+n <- nrow(law)
+theta.b <- numeric(B)
+
+for (b in 1:B) {
+  i <- sample(1:n,size=n,replace=T)
+  LSAT <- law$LSAT[i]
+  GPA <- law$GPA[i]
+  theta.b[b] <- cor(LSAT, GPA)
+}
+
+bias <- mean(theta.b-theta.hat)
+bias
+
+# compare with result from boot function
+boot(law,r,R=2000)
+
+## Example 8.5
+data(patch, package="bootstrap")
+patch
+
+n <- nrow(patch) #sample size in bootstrap package
+B <- 2000
+theta.b <- numeric(B)
+theta.hat <- mean(patch$y)/mean(patch$z)
+
+# bootstrap
+for (b in 1:B){
+  i <- sample(1:n, size=n, replace = T)
+  y <- patch$y[i]
+  z <- patch$z[i]
+  theta.b[b] <- mean(y)/mean(z)
+}
+bias <- mean(theta.b) - theta.hat
+se <- sd(theta.b)
+print(list(est=theta.hat, bias=bias, se=se, cv=bias/se))
+
+#======================================#
+#=== Bootstrap Confidence Intervals ===#
+#======================================#
+
+## Example 8.9
+library(boot) #for boot and boot.ci
+data(patch, package="bootstrap")
+
+theta.boot <- function(dat, ind){
+  #function to compute the statistic
+  y <- dat[ind, 1]
+  z <- dat[ind, 2]
+  mean(y)/mean(z)
+}
+
+y <- patch$y
+z <- patch$z
+dat <- cbind(y,z)
+boot.obj <- boot(dat, statistic= theta.boot, R=2000)
+
+print(boot.obj)
+
+#help(boot.ci)
+print(boot.ci(boot.obj,type=c("basic","norm","perc")))
+
+#calculations for bootstrap confidence intervals
+alpha <- c(0.025, 0.975)
+
+#normal
+print(boot.obj$t0 + qnorm(alpha)*sd(boot.obj$t))
+
+#basic
+print(2*boot.obj$t0 - quantile(boot.obj$t, rev(alpha), type=1))
+
+#percentile
+print(quantile(boot.obj$t,alpha, type=6))
+
+## Example 8.10
+library(boot)
+data(law, package="bootstrap")
+boot.obj <- boot(law, R=2000, statistic=function(x,i){cor(x[i,1],x[i,2])})
+print(boot.ci(boot.obj,type=c("basic","norm","perc")))
+
+## Example 8.11
+boot.t.ci <- function(x, B=500, R=100, level=0.95, statistic){
+  #compute the bootstrap t CI
+  x <- as.matrix(x)
+  n <- nrow(x)
+  stat <- numeric(B)
+  se <- numeric(B)
+  boot.se <- function(x, R, f){
+    #local function to compute the bootstrap
+    #estimate of standard error for statistic f(x)
+    x <- as.matrix(x)
+    m <- nrow(x)
+    th <- replicate(R, expr={
+      i <- sample(1:m, size=m, replace=T)
+      f(x[i,])
+    })
+    return(sd(th))
+  }
+  
+  for(b in 1:B){
+    j <- sample(1:n, size=n, replace=T)
+    y <- x[j,]
+    stat[b] <- statistic(y)
+    se[b] <- boot.se(y,R = R, f=statistic)
+  }
+  
+  statO <- statistic(x)
+  t.stats <- (stat-statO)/se
+  seO <- sd(stat)
+  alpha <- 1-level
+  Qt <- quantile(t.stats, c(alpha/2,1-alpha/2),type=1)
+  names(Qt) <- rev(names(Qt))
+  CI <- rev(statO-Qt*seO)
+}
+
+## Example 8.12
+dat <- cbind(patch$y,patch$z)
+stat <- function(dat){
+  mean(dat[,1])/mean(dat[,2])
+}
+ci <- boot.t.ci(dat,statistic=stat, B=2000, R=200)
+print(ci)
+
+#======================#
+#=== Week 11 Lab 15 ===#
+#======================#
+library(bootstrap)
+library(boot)
+
+## Question 1
+# Write the R code for bootstrap
+data(law82, package="bootstrap")
+law82
+
+n <- nrow(law82) #sample size in bootstrap package
+B <- 2000
+theta.b <- numeric(B)
+theta.hat <- cor(law82$LSAT,law82$GPA)
+
+# bootstrap
+for (b in 1:B){
+  i <- sample(1:n, size=n, replace = T)
+  y <- law82$LSAT[i]
+  z <- law82$GPA[i]
+  theta.b[b] <- cor(y,z)
+}
+bias <- mean(theta.b) - theta.hat
+se <- sd(theta.b)
+print(list(est=theta.hat, bias=bias, se=se))
+
+# Use the boot function for bootstrap
+# Define the function for boot function
+# The LSAT and GPA are columns 2 and 3 in the data law 82
+r <- function(x, i){
+  # want correlation of columns 1 and 2
+  cor(x[i,2],x[i,3])
+}
+
+obj <- boot(data=law82, statistic = r, R=2000)
+obj
+```
+
+## Week 12 (11.8 - 11.14): Bootstrap II and Jackknife
+
+```{r}
+#=================#
+#=== Jackknife ===#
+#=================#
+
+## Example 8.6
+data(patch, package="bootstrap")
+n <- nrow(patch)
+y <- patch$y
+z <- patch$z
+theta.hat <- mean(y)/mean(z)
+print(theta.hat)
+
+# compute the jackknife replicates, leave-one-out estimates
+theta.jack <- numeric(n)
+for(i in 1:n) theta.jack[i] <- mean(y[-i])/mean(z[-i])
+bias <- (n-1)*(mean(theta.jack)-theta.hat)
+
+print(bias) #jackknife estimate of bias
+
+## Example 8.7
+se <- sqrt((n-1)*mean((theta.jack-mean(theta.jack))^2))
+print(se)
+
+## Example 8.8
+n <- 10
+x <- sample(1:100,size=n)
+
+#jackknife estimate of se
+M <- numeric(n)
+for(i in 1:n){    #leave one out
+  y <- x[-i]
+  M[i] <- median(y)
+}
+Mbar <- mean(M)
+print(sqrt((n-1)/n*sum((M-Mbar)^2)))
+
+
+#bootstrap estimate of se
+Mb <- replicate(1000, expr={
+  y <- sample(x,size=n,replace=T)
+  median(y)
+})
+print(sd(Mb))
+
+#details and results
+#the sample x
+x
+# jackknife medians
+M
+#jackknife est. of se
+print(sqrt((n-1)/n*sum((M-Mbar)^2)))
+# bootstrap medians
+Mb
+# bootstrap est. of se
+sd(Mb)
+
+#======================#
+#=== Week 12 Lab 16 ===#
+#======================#
+library(boot)
+library(bootstrap)
+
+data(law82,package="bootstrap")
+
+#------------------------------#
+#--- Write own code for CIs ---#
+#------------------------------#
+B <- 2000
+n <- nrow(law82)
+theta.b <- numeric(B)
+theta.hat <- cor(law82$LSAT,law82$GPA)
+
+#Get B bootstrap correlation estimates
+for (b in 1:B){
+  i <- sample(1:n, size=n, replace = T)
+  y <- law82$LSAT[i]
+  z <- law82$GPA[i]
+  theta.b[b] <- cor(y,z)
+}
+
+#Construct the confidence intervals based on formulas
+alpha <- c(0.025, 0.975)
+
+#normal
+print(theta.hat + qnorm(alpha)*sd(theta.b))
+
+#basic
+print(2*theta.hat - quantile(theta.b, rev(alpha), type=1))
+
+#percentile
+print(quantile(theta.b,alpha, type=6))
+
+
+#-------------------------------------#
+#--- Use build in function for CIs ---#
+#-------------------------------------#
+
+#LSAT and GPA are columns 2 and 3 in law82
+boot.obj <- boot(law82, R=2000, statistic=function(x,i){cor(x[i,2],x[i,3])})
+print(boot.ci(boot.obj,type=c("basic","norm","perc")))
+
+#======================#
+#=== Week 12 Lab 17 ===#
+#======================#
+library(boot)
+library(bootstrap)
+
+data(law82, package="bootstrap")
+
+## Question 1
+# Directly use the function defined in Example 8.11
+boot.t.ci <- function(x, B=500, R=100, level=0.95, statistic){
+  #compute the bootstrap t CI
+  x <- as.matrix(x)
+  n <- nrow(x)
+  stat <- numeric(B)
+  se <- numeric(B)
+  boot.se <- function(x, R, f){
+    #local function to compute the bootstrap
+    #estimate of standard error for statistic f(x)
+    x <- as.matrix(x)
+    m <- nrow(x)
+    th <- replicate(R, expr={
+      i <- sample(1:m, size=m, replace=T)
+      f(x[i,])
+    })
+    return(sd(th))
+  }
+  
+  for(b in 1:B){
+    j <- sample(1:n, size=n, replace=T)
+    y <- x[j,]
+    stat[b] <- statistic(y)
+    se[b] <- boot.se(y,R = R, f=statistic)
+  }
+  
+  statO <- statistic(x)
+  t.stats <- (stat-statO)/se
+  seO <- sd(stat)
+  alpha <- 1-level
+  Qt <- quantile(t.stats, c(alpha/2,1-alpha/2),type=1)
+  names(Qt) <- rev(names(Qt))
+  CI <- rev(statO-Qt*seO)
+}
+
+# Define the function for correlation
+# LSAT and GPA are columns 2 and 3 of law82
+stat <- function(dat){
+  cor(dat[,2],dat[,3])
+}
+ci <- boot.t.ci(law82,statistic=stat, B=2000, R=200)
+print(ci)
+
+## Question 2
+n <- nrow(law82)
+theta.hat <- cor(law82$LSAT,law82$GPA)
+
+# compute the jackknife replicates, leave-one-out estimates
+theta.jack <- numeric(n)
+for(i in 1:n) theta.jack[i] <- cor(law82$LSAT[-i],law82$GPA[-i])
+bias <- (n-1)*(mean(theta.jack)-theta.hat)
+
+print(bias) #jackknife estimate of bias
+
+se <- sqrt((n-1)*mean((theta.jack-mean(theta.jack))^2))
+print(se)
+```
+
+## Week 13 (11.15 - 11.21): Probability Density Estimation
+
+```{r}
+#======================================#
+#=== Probability Density Estimation ===#
+#======================================#
+
+data(airquality)
+# Histogram
+hist(airquality$Wind,prob=T)
+
+# Density (kernel density estimats)
+d <- density(airquality$Wind)
+plot(d)
+
+#-----------------#
+#--- Histogram ---#
+#-----------------#
+
+help(hist)
+
+hist(airquality$Wind)
+hist(airquality$Wind,breaks=1)
+hist(airquality$Wind,breaks=5)
+hist(airquality$Wind,breaks=10)
+hist(airquality$Wind,breaks=15)
+
+# undersmooth
+hist(airquality$Wind,prob=T,breaks=30)
+# oversmooth
+hist(airquality$Wind,prob=T,breaks=3)
+
+### Sturges' Rule
+## Example 12.1
+n <- 25
+x <- rnorm(n)
+# calc breaks according to Sturges' Rule
+nclass <- ceiling(1+log2(n))
+cwidth <- diff(range(x)/nclass)
+breaks <- min(x)+cwidth*0:nclass
+h.default <- hist(x,freq = F, xlab="default",main="hist: default")
+curve(dnorm(x), from=-3, to=3, add=T)
+h.sturges <- hist(x, breaks=breaks, freq = F, main="hist: Sturges")
+curve(dnorm(x), from=-3, to=3, add=T)
+
+print(h.default$breaks)
+
+print(h.default$counts)
+
+print(round(h.sturges$breaks,1))
+
+print(h.sturges$counts)
+
+print(cwidth)
+
+body(nclass.Sturges)
+
+# Figure 12.1
+par(mfcol=c(2,2))
+n <- 25
+x <- rnorm(n)
+# calc breaks according to Sturges' Rule
+nclass <- ceiling(1+log2(n))
+cwidth <- diff(range(x)/nclass)
+breaks <- min(x)+cwidth*0:nclass
+h.default <- hist(x,freq = F, xlab="default",main="hist: default")
+curve(dnorm(x), from=-3, to=3, add=T)
+h.sturges <- hist(x, breaks=breaks, freq = F, main="hist: Sturges")
+curve(dnorm(x), from=-3, to=3, add=T)
+
+n <- 1000
+x <- rnorm(n)
+# calc breaks according to Sturges' Rule
+nclass <- ceiling(1+log2(n))
+cwidth <- diff(range(x)/nclass)
+breaks <- min(x)+cwidth*0:nclass
+h.default <- hist(x,freq = F, xlab="default",main="hist: default")
+curve(dnorm(x), from=-3, to=3, add=T)
+h.sturges <- hist(x, breaks=breaks, freq = F, main="hist: Sturges")
+curve(dnorm(x), from=-3, to=3, add=T)
+
+par(mfcol=c(1,1))
+
+## Example 12.2
+x0 <- 0.1
+b <- which.min(h.default$breaks <= x0) -1
+print(c(b,h.default$density[b]))
+b <- which.min(h.sturges$breaks <= x0) -1
+print(c(b,h.sturges$density[b]))
+
+h.default$counts[7]/(n*0.5)
+h.default$counts[6]/(n*cwidth)
+
+### Scott's Normal Reference Rule
+## Example 12.3
+library(MASS)  # for geyser and truehist
+waiting <- geyser$waiting
+n <- length(waiting)
+
+# rounding the constant in Scott's rule
+# and using sample standard deviation to estimate sigma 
+h <- 3.5*sd(waiting)*n^(-1/3)
+
+# nubmer of classes is determined by the range and h
+m <- min(waiting)
+M <- max(waiting)
+nclass <- ceiling((M-m)/h)
+breaks <- m+h*0:nclass
+
+h.scott <- hist(waiting, breaks=breaks, freq=F, main="")
+truehist(waiting, nbins="Scott", x0=0, prob=T, col=0)
+hist(waiting, breaks="scott", prob=T, density=5, add=T)
+
+#------------------------------------------#
+#--- Frequency Polygon Density Estimate ---#
+#------------------------------------------#
+
+## Example 12.4
+waiting <- geyser$waiting #in MASS
+n <- length(waiting)
+# freq poly bin width using normal ref rule
+h <- 2.15*sqrt(var(waiting))*n^(-1/5)
+
+# calculate the sequence of breaks and histogram
+br <- pretty(waiting, diff(range(waiting))/h)
+brplus <- c(min(br)-h, max(br+h))
+histg <- hist(waiting, breaks=br, freq=F, main="",xlim=brplus)
+
+vx <- histg$mids # midpoints of each class interval
+vy <- histg$density # density est at vertices of polygon
+delta <- diff(vx)[1] # h after pretty is applied 
+k <- length(vx)
+vx <- vx+delta
+vx <- c(vx[1]-2*delta, vx[1]-delta, vx)
+vy <- c(0, vy, 0)
+# add the polygon to the histogram
+polygon(vx,vy)
+
+# check estimates by numerical integration
+fpoly <- approxfun(vx, vy)
+print(integrate(fpoly, lower=min(vx), upper=max(vx)))
+
+# display a frequency polygon density estimate with ggplot 2
+library(ggplot2)
+ggplot(geyser, aes(waiting)) + geom_freqpoly(binsize=h)
+
+#--------------------------------------#
+#--- The Averaged Shifted Histogram ---#
+#--------------------------------------#
+
+## Example 12.6 (ASH density estimate)
+library(MASS)
+waiting <- geyser$waiting
+n <- length(waiting)
+m <- 20
+a <- min(waiting) - 0.5
+b <- max(waiting) + 0.5
+h <- 7.27037
+delta <- h/m
+
+# get the bin counts on the delta-width mesh
+br <- seq(a - delta*m, b + 2*delta*m, delta)
+histg <- hist(waiting, breaks = br, plot = F)
+nk <- histg$counts
+K <- abs((1-m):(m-1))
+
+fhat <- function(x){
+  #locate the leftmost interval containing x
+  i <- max(which(x>br))
+  k <- (i-m+1):(i+m-1)
+  #get the 2m-1 bin counts centered at x
+  vk <- nk[k]
+  sum((1-K/m)*vk)/(n*h) #f.hat
+}
+
+# density can be computed at any points in range of data
+z <- as.matrix(seq(a,b+h, .1))
+f.ash <- apply(z, 1, fhat) #density estimates at midpts
+
+# plot ASH density estimate over histogram
+br2 <- seq(a, b+h, h)
+hist(waiting, breaks = br2, freq=F, main="", ylim=c(0, max(f.ash)))
+lines(z, f.ash, xlab="waiting")
+
+#---------------------------------#
+#--- Kernel Density Estimation ---#
+#---------------------------------#
+example(density)
+
+## Example 12.7
+library(MASS)
+waiting <- geyser$waiting
+n <- length(waiting)
+h1 <- 1.06*sd(waiting)*n^(-1/5)
+h2 <- 0.9*min(c(IQR(waiting)/1.34,sd(waiting)))*n^(-1/5)
+plot(density(waiting))
+
+print(density(waiting))
+
+print(c(sd(waiting), IQR(waiting)))
+print(c(h1,h2))
+
+## Example 12.8
+n <- length(precip)
+h1 <- 1.06*sd(precip)*n^(-1/5)
+h2 <- 0.9*min(c(IQR(precip)/1.34,sd(precip)))*n^(-1/5)
+h0 <- bw.nrd0(precip)
+
+par(mfrow=c(2,2))
+plot(density(precip))         #default Gaussian (h0)
+plot(density(precip,bw=h1))   #Gaussian, bandwidth h1
+plot(density(precip,bw=h2))   #Gaussian, bandwidth h2
+plot(density(precip,kernel = "cosine"))
+par(mfrow=c(1,1))
+
+print(c(h0,h1,h2))
+
+## Example 12.9
+d <- density(precip)
+xnew <- seq(0,70,10)
+approx(d$x,d$y,xout=xnew)
+
+#======================#
+#=== Week 13 Lab 18 ===#
+#======================#
+
+## Question 1
+# generate random sample 
+n <- 100
+x <- rlnorm(n)
+
+par(mfrow=c(1,3))
+# Sturges' Rule
+nclass <- ceiling(1+log2(n))
+cwidth <- diff(range(x)/nclass)
+breaks <- min(x)+cwidth*0:nclass
+h.sturges <- hist(x, breaks=breaks, freq = F, main="hist: Sturges")
+curve(dlnorm(x), add=T)
+
+# Scott's Normal Reference Rule
+h <- 3.5*sd(x)*n^(-1/3)
+# nubmer of classes is determined by the range and h
+m <- min(x)
+M <- max(x)
+nclass <- ceiling((M-m)/h)
+breaks <- m+h*0:nclass
+h.scott <- hist(x, breaks=breaks, freq=F, main="hist: Scott's")
+curve(dlnorm(x), add=T)
+
+# FD Rule
+h <- 2*IQR(x)*n^(-1/3)
+nclass <- ceiling((M-m)/h)
+breaks <- m+h*0:nclass
+h.FD <- hist(x, breaks=breaks, freq=F, main="hist: FD")
+curve(dlnorm(x), add=T)
+
+par(mfrow=c(1,1))
+
+## Question 2
+nclass <- ceiling(1+log2(n))
+h <- diff(range(x)/nclass)
+br <- min(x)+cwidth*0:nclass
+brplus <- c(min(br)-h,max(br+h))
+hists <- hist(x, breaks=br, freq = F, main="Frequency Polygon Estimate",xlim=brplus)
+
+vx <- hists$mids
+vy <- hists$density
+delta <- diff(vx)[1]
+k <- length(vx)
+vx <- c(vx[1]-delta, vx, vx[k]+delta)
+vy <- c(0,vy,0)
+polygon(vx,vy)
+
+#======================#
+#=== Week 13 Lab 19 ===#
+#======================#
+
+## Question 1
+library(MASS)
+S.Length <- iris$Sepal.Length
+n <- length(S.Length)
+m <- 10
+a <- min(S.Length) - 0.5
+b <- max(S.Length) + 0.5
+h <- 2.576*sd(S.Length)*n^(-1/5)
+delta <- h/m
+
+# get the bin counts on the delta-width mesh
+br <- seq(a - delta*m, b + 2*delta*m, delta)
+histg <- hist(S.Length, breaks = br, plot = F)
+nk <- histg$counts
+K <- abs((1-m):(m-1))
+
+fhat <- function(x){
+  #locate the leftmost interval containing x
+  i <- max(which(x>br))
+  k <- (i-m+1):(i+m-1)
+  #get the 2m-1 bin counts centered at x
+  vk <- nk[k]
+  sum((1-K/m)*vk)/(n*h) #f.hat
+}
+
+# density can be computed at any points in range of data
+z <- as.matrix(seq(a,b+h, .1))
+f.ash <- apply(z, 1, fhat) #density estimates at midpts
+
+# plot ASH density estimate over histogram
+br2 <- seq(a, b+h, h)
+hist(S.Length, breaks = br2, freq=F, main="", ylim=c(0, max(f.ash)))
+lines(z, f.ash, xlab="Sepal.Length")
+
+## Question 2
+n <- length(S.Length)
+h <- 0.9*min(c(IQR(S.Length)/1.34,sd(S.Length)))*n^(-1/5)
+
+par(mfrow=c(1,3))
+plot(density(S.Length,bw=h))   #Gaussian, bandwidth h
+plot(density(S.Length,bw=h,kernel = "triangular")) #Triangular, bandwidth h
+plot(density(S.Length,bw=h,kernel = "biweight")) #Biweight, bandwidth h
+par(mfrow=c(1,1))
+```
+
+## Week 15 (11.29 - 12.5): Visualization of Multivariate Data
+
+```{r}
+#==========================================#
+#=== Visualization of Multivariate Data ===#
+#==========================================#
+
+#----------------------#
+#--- Panel Displays ---#
+#----------------------#
+
+## Example 5.1 (Scatterplot matrix)
+data(iris)
+# virginica data in first 4 columns of the last 50 obs
+pairs(iris[101:150,1:4])
+
+# panel.d plots the densities
+panel.d <- function(x, ...){
+  usr <- par("usr")
+  on.exit(par(usr))
+  par(usr=c(usr[1:2], 0, .5))
+  lines(density(x))
+}
+
+x <- scale(iris[101:150, 1:4])
+r <- range(x)
+pairs(x, diag.panel=panel.d, xlim= r,ylim= r)
+
+# The lattice package
+library(lattice)
+splom(iris[101:150,1:4])
+
+#for all 3 at once, in color, plot 2
+splom(iris[,1:4], groups=iris$Species)
+
+#for all 3 at once, black and white, plot 3
+splom(~iris[1:4], groups=Species, data=iris, col=1, pch=c(1,2,3), cex=c(.5, .5, .5))
+
+#-------------------------#
+#--- Correlation Plots ---#
+#-------------------------#
+
+install.packages("FactoMineR")
+install.packages("corrplot")
+
+## Example 5.2
+library(FactoMineR) #decathlon data
+library(corrplot)
+data("decathlon")
+str(decathlon) #check the structure of the data
+
+
+corrMat <- cor(decathlon[,1:10]) #calculate correlation matrix
+
+help(corrplot)
+
+corrplot(corrMat, type="upper", tl.col="black", tl.srt=45)
+
+corrplot(corrMat, type="upper", method="square", addCoef.col = "black", diag=F)
+
+#---------------------#
+#--- Surface Plots ---#
+#---------------------#
+
+## Example 5.3
+# the standard BVN density
+demo(persp)
+
+help(outer)
+help(persp)
+
+f <- function(x,y){
+  z <- (1/(2*pi))*exp(-.5*(x^2+y^2))
+}
+
+y <- x <- seq(-3,3, length=50)
+z <- outer(x,y,f) # compute density for all (x,y)
+
+persp(x,y,z) # the default plot
+
+persp(x,y,z, theta=45, phi=30, expand=0.6,
+      ltheta=120, shade=0.75, ticktype = "detailed",
+      xlab="X", ylab="Y", zlab="f(x,y)")
+
+
+## Example 5.4 Add elements to perspective plot
+# store viewing transformation in M
+M <- persp(x,y,z, theta = 45, phi=30, expand=0.4, box=F) 
+M
+
+# add some points along a circle
+a <- seq(-pi, pi, pi/16)
+newpts <- cbind(cos(a),sin(a))*2
+newpts <- cbind(newpts, 0, 1) # z=0, t=1
+N <- newpts%*% M
+points(N[,1]/N[,4], N[,2]/N[,4], col=2)
+
+# add lines
+x2 <- seq(-3,3,.1)
+y2 <- -x2^2/3
+z2 <- dnorm(x2)*dnorm(y2)
+N <- cbind(x2,y2,z2,1)%*% M
+lines(N[,1]/N[,4], N[,2]/N[,4], col=4)
+
+# add text
+x3 <- c(0, 3.1)
+y3 <- c(0, -3.1)
+z3 <- dnorm(x3)*dnorm(y3)*1.1
+N <- cbind(x3,y3,z3,1)%*% M
+text(N[1,1]/N[1,4], N[1,2]/N[1,4], "f(x,y)")
+text(N[2,1]/N[2,4], N[2,2]/N[2,4], bquote(y==-x^2/3))
+
+### Other functions for graphing surfaces
+## Example 5.5
+library(lattice)
+x <- y <- seq(-3,3,length=50)
+
+xy <- expand.grid(x,y)
+z <- (1/(2*pi))*exp(-.5*(xy[,1]^2+xy[,2]^2))
+wireframe(z ~ xy[,1]*xy[,2])
+
+# interactive 3D display
+install.packages("rgl")
+library(rgl)
+demo(bivar)
+
+rgl.open() # Open a new RGL device
+aspect3d(1,1,20) # Change the x,y,z ratios to make the better display
+rgl.points(xy[,1],xy[,2],z, color=3)
+rgl.close()
+
+#-----------------------#
+#--- 3-D Scatterplot ---#
+#-----------------------#
+
+## Example 5.6
+library(lattice)
+attach(iris)
+
+iris$Species
+#basic 3 color plot with arrows along axes
+print(cloud(Petal.Length ~ Sepal.Length*Sepal.Width, data=iris, groups=Species))
+
+print(cloud(Sepal.Length ~ Petal.Length*Petal.Width, data=iris, groups=Species,
+            main="1", pch=1:3, scales = list(draw=F), zlab="SL",
+            screen=list(z=30, x=-75, y=0)),split=c(1,1,2,2),more=T)
+
+print(cloud(Sepal.Width ~ Petal.Length*Petal.Width, data=iris, groups=Species,
+            main="2", pch=1:3, scales = list(draw=F), zlab="SW",
+            screen=list(z=30, x=-75, y=0)),split=c(2,1,2,2),more=T)
+
+print(cloud(Petal.Length ~ Sepal.Length*Sepal.Width, data=iris, groups=Species,
+            main="3", pch=1:3, scales = list(draw=F), zlab="PL",
+            screen=list(z=30, x=-55, y=0)),split=c(1,2,2,2),more=T)
+
+print(cloud(Petal.Width ~ Sepal.Length*Sepal.Width, data=iris, groups=Species,
+            main="4", pch=1:3, scales = list(draw=F), zlab="PW",
+            screen=list(z=30, x=-55, y=0)),split=c(2,2,2,2),more=T)
+
+detach(iris)
+
+#---------------------#
+#--- Contour Plots ---#
+#---------------------#
+
+## Example 5.7
+# contour plot with labels
+contour(volcano, asp = 1, labcex = 1)
+
+# another version from lattice package
+library(lattice)
+contourplot(volcano) #similar to above
+
+library(rgl)
+example(rgl)
+
+## Example 5.8
+image(volcano, col=terrain.colors(100), axes = F)
+contour(volcano, levels=seq(100, 200, by = 10), add = T)
+
+filled.contour(volcano, color= terrain.colors, asp=1)
+levelplot(volcano, scales=list(draw=F), rlab="", ylab="")
+
+#--------------------#
+#--- 2D Histogram ---#
+#--------------------#
+
+## Example 5.9
+install.packages("hexbin")
+library(hexbin)
+x <- matrix(rnorm(4000),2000, 2)
+plot(x[,1],x[,2])
+plot(hexbin(x[,1],x[,2]))
+
+library(ggplot2)
+x <- data.frame(x)
+ggplot(x,aes(x[,1],x[,2]))+geom_hex()
+
+install.packages("gplots")
+library(gplots)
+hist2d(x,nbins=30, col=c("white", rev(terrain.colors(30))))
+
+#----------------------------------------#
+#--- Other 2D Representations of Data ---#
+#----------------------------------------#
+
+#--- Andrews Curves ---#
+## Example 5.10
+install.packages("DAAG")
+library(lattice)
+library(DAAG)
+attach(leafshape17)
+
+f <- function(a, v){
+  #Andrews curve f(a) for a data vector v in R^3
+  v[1]/sqrt(2) + v[2]*sin(a) + v[3]*cos(a)
+}
+
+#scale data to range [-1,1]
+x <- cbind(bladelen, petiole, bladewid)
+n <- nrow(x)
+mins <- apply(x, 2, min) #column minimums
+maxs <- apply(x, 2, max) #column maximums
+r <- maxs - mins         #column ranges
+y <- sweep(x, 2, mins)   #subtract column mins
+y <- sweep(y, 2, r, "/") #divide by range
+x <- 2*y -1              #now has range [-1,1]
+
+#set up plot window, but plot nothing yet
+plot(0, 0, xlim=c(-pi, pi), ylim=c(-3,3), 
+     xlab="t", ylab="Andrews Curves", main="", type="n")
+
+#now add the Andrews curves for each observation
+#line type correpsonds to leaf architecture
+#0=orthotropic, 1=plagiotropic
+a <- seq(-pi, pi, len=101)
+dim(a) <- length(a)
+for(i in 1:n){
+  g <- arch[i]+1
+  y <- apply(a, MARGIN = 1, FUN = f, v = x[i,])
+  lines(a, y, lty = g)
+}
+legend(3, c("Orthotropic", "Plagiotropic"), lty = 1:2)
+detach(leafshape17)
+
+#--- Parallel Coordinate Plots ---#
+## Example 5.11
+library(MASS)
+library(lattice)
+#trellis.device(color=F) #black and white display
+x <- crabs[seq(5, 200, 5), ] #get every fifth obs.
+parallelplot(~x[4:8]|sp*sex,x)
+
+#trellis.device(color=F) #black and white display
+x <- crabs[seq(5, 200, 5), ] #get every fifth obs.
+a <- x$CW * x$CL             #area of carapace
+x[4:8] <- x[4:8]/sqrt(a)     #adjust for size
+parallelplot(~x[4:8]|sp*sex,x)
+
+#--- Segment Plot ---#
+## Example 5.12
+x <- MASS::crabs[seq(5,200,5),] #get every fifth obs.
+x <- subset(x,sex=="M")         #keep just the males
+a <- x$CW * x$CL                #area of carapace
+x[4:8] <- x[4:8]/sqrt(a)        #adjust for size
+
+#use default color palette or other colors
+#palette(gray(seq(.4,.95,len=5))) #use gray scale
+palette(rainbow(6))
+stars(x[4:8], draw.segments = T,
+      labels = levels(x$sp), nrow = 4,
+      ylim = c(-2,10), key.loc = c(3,-1))
+
+#after viewing, restore the default colors
+palette("default")
+```
+
+

@@ -1,0 +1,59 @@
+---
+title: "Lab12"
+author: "Rishi Gummakonda"
+date: "10/21/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+```{r}
+
+m <- 1000
+g <- numeric(m) 
+
+for(i in 1:m)
+  {
+  x1 <- rnorm(1,4,1)
+  x2 <- rexp(1,2)
+  g[i] <- abs(x1+(x2)^2)
+}
+(est <- mean(g))
+
+```
+
+## Question 2
+
+```{r}
+m <- 1000
+n <- 20
+tmean <- numeric(m) 
+for(i in 1:m)
+  {
+  x <- sort(rnorm(n))
+  tmean[i] <- sum(x[3:(n-2) ])/(n-4)
+}
+
+(mse <- mean(tmean^2))
+
+```
+
+## Question 3
+
+```{r}
+
+n <- 20
+alpha <- 0.05
+UCL <- replicate(1000, expr = {
+  x <- rexp(n,0.5)
+  (n-1)*var(x)/qchisq(alpha,df=n-1)
+})
+#empirical confidence level
+mean(UCL >4)
+
+```
+

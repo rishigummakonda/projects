@@ -1,0 +1,68 @@
+---
+title: "Lab18"
+author: "Rishi Gummakonda"
+date: "11/23/2021"
+output: pdf_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+
+```{r cars}
+
+set.seed(1239)
+n <- 100
+x <- rlnorm(n)
+#Sturges' Rule
+nclass <- ceiling(1+log2(n))
+cwidth <- diff(range(x)/nclass)
+breaks <- min(x)+cwidth*0:nclass
+h.sturges <- hist(x, breaks=breaks, freq = F, main="hist: Sturges") 
+curve(dnorm(x), from=0, to=15, add=T)
+
+#Scott's normal reference rule
+h <- 3.5*sd(x)*n^(-1/3)
+m <- min(x)
+M <- max(x)
+nclass2 <- ceiling((M-m)/h)
+breaks2 <- m+h*0:nclass2
+h.scott <- hist(x, breaks=breaks2, freq = F, main = "hist: Scott's")
+curve(dnorm(x), from=0, to=15, add=T)
+
+#FD rule
+h2 <- 2*IQR(x)*n^(-1/3)
+z <- min(x)
+Z <- max(x)
+nclass3 <- ceiling((Z-z)/h2)
+breaks3 <- z+h2*0:nclass3
+h.FD <- hist(x, breaks=breaks3, freq=F, main="hist: FD")
+curve(dnorm(x), from=0, to=15, add=T)
+
+```
+
+
+## Question 2
+
+```{r}
+set.seed(14578)
+#Sturges' Rule
+nclass <- ceiling(1+log2(n))
+cwidth <- diff(range(x)/nclass)
+breaks <- min(x)+cwidth*0:nclass
+h.sturges <- hist(x, breaks=breaks, freq = F, main="hist: Frequency Polygon Density Estimate") #Frequency Polygon Density Estimate
+vx <- h.sturges$mids # midpoints of each class interval
+vy <- h.sturges$density # density est at vertices of polygon
+delta <- diff(vx)[1] # h after pretty is applied
+k <- length(vx)
+vx <- vx+delta
+vx <- c(vx[1]-2*delta, vx[1]-delta, vx)
+vy <- c(0, vy, 0)
+# add the polygon to the histogram
+polygon(vx,vy)
+
+```
+

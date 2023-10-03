@@ -1,0 +1,88 @@
+---
+title: "CSE 160: Lab Modeling Mushrooms"
+author: "Rishi Gummakonda" 
+date: 23 March 2020
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+---
+
+The goal for this lab is to become more comfortable with the typical R coding tasks for data science modeling.
+
+Put your name at the top as the author of this R notebook.
+
+Start by reading the mushroom data set from http://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data and storing it in a data frame.
+```{r}
+data <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/mushroom/agaricus-lepiota.data", header=FALSE, colClasses = "factor")
+head(data)
+str(data)
+lapply(data, unique)
+data$V17<-NULL
+
+```
+
+Sample half of the data for training, and half for testing
+
+```{r}
+m<-dim(data)[1]
+val<- sample(1:m, size = m/2, replace = FALSE, prob = rep(1/m,m))
+training<- data[-val,]
+test<-data[val,]
+head(training)
+head(test)
+
+
+```
+
+Build a decision tree to predict edible mushrooms
+```{r}
+
+library(rpart)
+model <- rpart(V1~., data=training, method="class")
+plot(model)
+text(model, use.n=TRUE)
+
+```
+
+Calculate and print accuracy on the test data
+```{r}
+pred <- predict(model, data=test, type="class")
+con <- table(pred, test$V1)
+print(con)
+acc <- sum(diag(con))/sum(con) #accuracy
+acc
+
+
+```
+
+Calculate and print precision and recall on the test data
+```{r}
+prec <- (con[1,1]) / (con[1,1] + con[1,2]) # precision
+rec <- (con[1,1]) / (con[1,1] + con[2,1]) # recall
+prec
+rec
+
+```
+
+Do the same for another predictive method.  Your choice which method (presumably one that we have covered already).
+```{r}
+library("kknn")
+kknnmodel <- train.kknn(V1 ~., training, kmax = 50)
+summary(kknnmodel)
+kpred <- predict(kknnmodel, test)
+
+kcon <- table(kpred, test$V1)
+print(kcon)
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+

@@ -1,0 +1,63 @@
+---
+title: "Lab19"
+author: "Rishi Gummakonda"
+date: "11/23/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Question 1
+
+```{r cars}
+
+library(MASS)
+sepalength <- iris$Sepal.Length
+n <- length(sepalength)
+m <- 10
+a <- min(sepalength) - 0.5
+b <- max(sepalength) + 0.5
+h <- 2.576*sqrt(var(sepalength))*n^(-1/5)
+delta <- h/m
+# get the bin counts on the delta-width mesh
+br <- seq(a - delta*m, b + 2*delta*m, delta) 
+histg <- hist(sepalength, breaks = br, plot = F)
+nk <- histg$counts
+K <- abs((1-m):(m-1))
+
+fhat <- function(x){
+  #locate the leftmost interval containing x
+  i <- max(which(x>br))
+  k <- (i-m+1):(i+m-1)
+#get the 2m-1 bin counts centered at x 
+  vk <- nk[k]
+  sum((1-K/m)*vk)/(n*h) #f.hat
+}
+
+# plot ASH density estimate over histogram
+z <- as.matrix(seq(a,b+h, .1))
+f.ash <- apply(z, 1, fhat) #density estimates at midpts
+br2 <- seq(a, b+h, h)
+hist(sepalength, breaks = br2, freq=F, main="", ylim=c(0, max(f.ash))) 
+lines(z, f.ash, xlab="sepal length")
+
+```
+
+
+# Question 2
+
+```{r}
+library(MASS)
+sepalength <- iris$Sepal.Length
+n <- length(sepalength)
+h <- 0.9*min(c(IQR(sepalength)/1.34,sd(sepalength)))*n^(-1/5) 
+par(mfrow=c(2,2))
+#Gaussian
+plot(density(sepalength,bw=h))
+#Triangular
+plot(density(sepalength,bw=h,kernel = "triangular")) #Biweight
+plot(density(sepalength,bw=h,kernel = "biweight"))
+```
+

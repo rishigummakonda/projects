@@ -1,0 +1,104 @@
+---
+title: "Lab20"
+author: "Rishi Gummakonda"
+date: "11/30/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+The scor(bootstrap) data has exam scores in five subjects: mechanics, vectors, algebra, analysis, and
+statistics, for 88 students. Compare the five variables in a scatterplot matrix.
+
+
+```{r }
+## Question 1
+library(bootstrap)
+data(scor)
+#pairs(scor[101:150,1:4])
+
+# panel.d plots the densities
+panel.d <- function(x, ...){
+  usr <- par("usr")
+  on.exit(par(usr))
+  par(usr=c(usr[1:2], 0, .5))
+  lines(density(x))
+}
+
+x <- scale(scor[1:88, 1:5])
+r <- range(x)
+pairs(x, diag.panel=panel.d, xlim= r,ylim= r)
+
+# The lattice package
+library(lattice)
+splom(scor[1:88, 1:5])
+
+#for all 3 at once, in color, plot 2
+scor_groups <- c(scor$mec, scor$vec, scor$alg, scor$ana, scor$sta)
+splom(scor[,1:5], groups=scor_groups)
+
+#for all 3 at once, black and white, plot 3
+splom(~scor[1:5], groups=scor_groups, data=scor, col=1, pch=c(1,2,3), cex=c(.5, .5, .5))
+```
+
+## Question 2
+Compute the correlation matrix for the five variables in the scor(bootstrap) data and then use corrplot
+to generate a plot to visualize this matrix.
+
+```{r}
+#-------------------------#
+#--- Correlation Plots ---#
+#-------------------------#
+
+
+## Example 5.2
+library(FactoMineR) #decathlon data
+library(corrplot)
+data("scor")
+str(scor) #check the structure of the data
+
+
+corrMat <- cor(scor) #calculate correlation matrix
+
+#help(corrplot)
+
+corrplot(corrMat, type="upper", tl.col="black", tl.srt=45)
+
+corrplot(corrMat, type="upper", method="square", addCoef.col = "black", diag=F)
+
+
+```
+
+
+
+## Question 3
+Use persp function to plot the surface of the following bivariate function
+
+```{r}
+
+## Example 5.3
+# the standard BVN density
+demo(persp)
+
+##help(outer)
+##help(persp)
+
+f <- function(x,y){
+  z <- 0.5 * (x^2 +y^3)
+}
+
+y <- x <- seq(-3,3, length=50)
+z <- outer(x,y,f) # compute density for all (x,y)
+
+persp(x,y,z) # the default plot
+
+persp(x,y,z, theta=45, phi=30, expand=0.6,
+      ltheta=120, shade=0.75, ticktype = "detailed",
+      xlab="X", ylab="Y", zlab="f(x,y)")
+
+```
+

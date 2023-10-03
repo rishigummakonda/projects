@@ -1,0 +1,128 @@
+---
+title: "Homework 2 - MATH 312"
+author: "Rishi Gummakonda"
+date: "9/10/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1: Familiar with some discrete distributions
+
+(a) Using the rbinom function, generate two random samples, X = {x1 , . . . , x1000 } from Binomial(10, 0.7) distribution, Y = {y1, . . . , y1000} from Binomial(10, 0.5) respectively. Display a histogram of the sample X, and add the histogram of the sample Y to it, set breaks=0:10. Use different colors for the two histograms.
+
+```{r}
+
+#code
+
+```
+
+
+(b) Using the rpois function, generate two random samples, X = {x1, . . . , x1000} from Poisson(2) distribution, Y = {y1, . . . , y1000} from Poisson(4) respectively. Display a histogram of the sample X, and add the histogram of the sample Y to it, set breaks=0:15. Use different colors for the two histograms.
+
+```{r}
+
+#code
+
+```
+
+
+## Question 2: Familiar with some continuous distributions
+
+(a) Using the rgamma function, generate three random samples, X = {x1, . . . , x100} from Gamma(1, 1) distribution, Y = {y1, . . . , y100} from Gamma(2, 1), Z = {y1, . . . , y100} from Gamma(1, 2) respectively. Display a probability histogram of the sample X , and add the density curve of Gamma(1, 1) distribution to it. Similarly, display the histograms of Y and Z and add their corresponding density curve to them. Use par(mfrow=c(1,3)) to display the three histograms in one row.
+
+```{r}
+#code
+```
+
+
+(b) Use dbeta to draw the density curve of Beta(3, 3) distribution. Add the density curves of Beta(2, 3) and Beta(3, 2) to the plot.
+
+```{r}
+#code
+```
+
+
+## Question 3: Verify some probability results using R
+
+a)
+
+```{r}
+
+#code
+
+```
+
+b)
+```{r}
+#code
+```
+
+
+## Question 4: Verify the law of large numbers using R
+
+
+a)
+```{r}
+#code
+```
+
+
+(b)
+```{r}
+#code
+```
+
+
+(c)
+
+```{r}
+#code
+```
+
+(d)
+
+```{r}
+#code
+```
+
+(e) 
+
+```{r}
+#code
+```
+
+(f)
+```{r}
+#code
+```
+
+
+## Question 5: Verify the central limit theorem using R
+
+(a) Use rexp to generate 1000 random sample of sample size 5 of Exponential(2) distribution. Calculate the sample mean of each random sample and record the results inf a vector y1.
+
+```{r}
+#code
+```
+
+(b) Use rexp to generate 1000 random sample of sample size 20 of Exponential(2) distribution. Calculate the sample mean of each random sample and record the results in a vector y2.
+
+```{r}
+#code
+```
+
+(c) Use rexp to generate 1000 random sample of sample size 50 of Exponential(2) distribution. Calculate the sample mean of each random sample and record the results in a vector y3.
+
+```{r}
+#code
+```
+
+(d) Display the histograms of y1, y2, and y3 in a row (par=mfrow(1,3)), what have you observed?
+
+```{r}
+
+```
+

@@ -1,0 +1,60 @@
+---
+title: "R Notebook"
+author: Brian Davison
+date: Feb 27, 2018 
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+============================================
+
+CSE 160 Intro to Data Science
+Example of real-world clustering in class 
+
+This notebook uses data downloaded from the College Scorecard: https://collegescorecard.ed.gov/data/ 
+
+```{r}
+college <- read.csv("~/Downloads/Most-Recent-Cohorts-Treasury-Elements (2).csv")
+dim(college) # just to see how much data we have 
+head(college) # what does it look like?  ***Also examine in RStudio...
+```
+
+
+```{r}
+college <- read.csv("~/Downloads/Most-Recent-Cohorts-Treasury-Elements (2).csv", na.strings=c("PrivacySuppressed", "NULL"))
+# the original data had multiple types of invalid entries that we need to convert to NAs
+```
+
+
+```{r}
+college$COUNT_ED <- NULL # this column was all NA
+c1 <- na.omit(college) # eliminates all rows containing NAs
+c2 <- c1[1:50,] # just to look at a small subsets
+d <- dist(c2[,5:88]) #calculate the distance between all points in c2, based only on columns 5-88
+```
+
+
+```{r}
+clusters <- hclust(d, method="ward.D") # perform hierarchical clustering
+plot(clusters, labels=c2$INSTNM) # show the dendrogram
+```
+
+```{r}
+groups <- cutree(clusters, k=4) # cut the dendrogram at 4 clusters and record which items belong in which cluster
+# Below is a function to print the contents of each cluster (using just a few attributes)
+print_clusters <- function(labels) {
+  for (i in 1:max(labels)) {
+    print (paste("cluster", i))
+    print(c2[labels==i, c("INSTNM", "MEDIAN_HH_INC", "PCT_BORN_US")])
+  }
+}
+print_clusters(groups) # shows the contents of each cluster
+```
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).

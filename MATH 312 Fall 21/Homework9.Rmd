@@ -1,0 +1,142 @@
+---
+title: "Homework9"
+author: "Rishi Gummakonda"
+date: "11/23/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1 (8.1)
+```{r}
+set.seed(1000)
+data(law, package = "bootstrap")
+n <- nrow(law)
+y <- law$LSAT
+z <- law$GPA
+theta.hat <- cor(y,z)
+#compute the jackknife replicates, leave-one-out estimates 
+
+theta.jack <- numeric(n)
+for (i in 1:n) {
+  theta.jack[i] <- cor(y[-i],z[-i])
+}
+#jackknife estimate of bias
+bias <- (n-1)*(mean(theta.jack)-theta.hat)
+print(bias)
+ #jackknife estimate of standard error
+se <- sqrt((n-1)*mean((theta.jack-mean(theta.jack))^2))
+print(se)
+
+```
+
+## Question 2 (8.3)
+```{r}
+
+set.seed(1000)
+data(law, package = "bootstrap")
+boot.t.ci <- function(x, B=500, R=100, level=0.95, statistic){
+  #compute the bootstrap t CI
+  x <- as.matrix(x)
+  n <- nrow(x)
+  stat <- numeric(B)
+  se <- numeric(B)
+  boot.se <- function(x, R, f){
+  #local function to compute the bootstrap #estimate of standard error for statistic f(x) 
+  x <- as.matrix(x)
+  m <- nrow(x)
+  th <- replicate(R, expr={
+      i <- sample(1:m, size=m, replace=T)
+      f(x[i,])})
+      return(sd(th))
+  }
+  
+  for(b in 1:B){
+  j <- sample(1:n, size=n, replace=T)
+  y <- x[j,]
+  stat[b] <- statistic(y)
+  se[b] <- boot.se(y,R = R, f=statistic)
+  }
+  
+  statO <- statistic(x)
+  t.stats <- (stat-statO)/se
+  seO <- sd(stat)
+  alpha <- 1-level
+  Qt <- quantile(t.stats, c(alpha/2,1-alpha/2),type=1)
+  names(Qt) <- rev(names(Qt))
+  CI <- rev(statO-Qt*seO)
+}
+
+dat <- cbind(law$LSAT,law$GPA) 
+stat <- function(x,i){
+  cor(x[i,1],x[i,2])
+  }
+#print 95% t confidence interval
+ci <- boot.t.ci(dat,statistic = stat, B=2000, R=200)
+print(ci)
+  
+
+```
+
+
+# Question 3
+```{r}
+
+data(scor, package = "bootstrap") #set up the bootstrap
+B <- 200
+n <- nrow(scor)
+R <- numeric(B)
+#bootstrap estimate of standard error of R (mechanics and vectors) 
+for (b in 1:B) {
+  i <- sample(1:n,size=n, replace=T)
+  mec <- scor$mec[i]
+  vec <- scor$vec[i]
+  R[b] <- cor(mec, vec)
+}
+print(sd(R))
+
+#bootstrap estimate of standard error of R (algebra and analysis)
+H <- numeric(B) 
+for (b in 1:B) {
+  i <- sample(1:n,size=n, replace=T)
+  alg <- scor$alg[i]
+  ana <- scor$ana[i]
+  H[b] <- cor(alg, ana)
+}
+
+print(sd(H))
+
+#bootstrap estimate of standard error of R (algebra and statistics)
+D <- numeric(B) 
+for (b in 1:B) {
+  i <- sample(1:n,size=n, replace=T)
+  alg <- scor$alg[i]
+  sta <- scor$sta[i]
+  D[b] <- cor(alg, sta)
+}
+print(sd(D))
+
+#bootstrap estimate of standard error of R (analysis and statistics)
+E <- numeric(B) 
+for (b in 1:B) {
+  i <- sample(1:n,size=n, replace=T)
+  ana <- scor$ana[i]
+  sta <- scor$sta[i]
+  E[b] <- cor(ana, sta)
+}
+print(sd(E))
+
+
+```
+
+# Question 4
+```{r}
+set.seed(1378)
+library(boot)
+data(scor, package = "bootstrap")
+boot.obj <- boot(scor, R=2000, statistic = function(x,i){cor(x[i,1],x[i,2])})
+print(boot.ci(boot.obj, type = c("basic","norm","perc")))
+```
+

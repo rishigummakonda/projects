@@ -1,0 +1,307 @@
+---
+title: "CSE160 Visualization Lab"
+author: "Rishi Gummakonda"
+date: "15 September 2020"
+output: html_notebook
+---
+
+Before we start, we would like to give a brief introduction about how to make your implementation work via the documentation of R. 
+
+We have mentioned the standard steps of modeling the data:
+1. Choose a model -- we have chosen a decision tree
+2. Learn the parameters of the model so that it fits the data as well as possible -- we need to specify the attributes (features) and the target (label) to fit
+
+The following code is the example we have shown previously that trains a decision tree on the Iris dataset, and now we would like to revisit again and see how everything matches.
+a
+```{r}
+library(rpart)
+model <- rpart(Species ~ Sepal.Length + Sepal.Width +
+Petal.Length + Petal.Width, data = iris, method="class")
+# See the decision tree
+plot(model)
+text(model, use.n = TRUE)
+```
+
+Now we would like to investigate the function "rpart". Recall a function that shows documentation for "rpart"?
+```{r}
+
+# PUT YOUR CODE HERE (and run it)
+help('rpart')
+
+```
+
+In the documentation, we can see the following sections:
+1. Description: tells us what this function does
+2. Usage: the function format
+3. Arguments: introduction for what each parameter means and even more
+        Note that arguments can be categorized into two groups
+        1. mandatory: we must specify value to those arguments
+        2. optional: we may not necessarily specify values to those optional arguments
+                     also some optional arguments may have DEFAULT VALUEs, which means if you do not specify, it takes default action as predefined
+
+4. Details: in case some explanation of argument is unclear
+5. Value: the kind of object returned by this function
+6. Examples
+
+It is clear that
+1. formula is assigned with "Species ~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width"
+2. data is assigned with "iris"
+3. method is assigned with "class"
+
+Now reading through the documentation, we are clear that
+1. We train a decision tree
+2. The attribute names for training are the columns named "Sepal.Length, Sepal.Width, Petal.Length, Petal.Width", as the documentation says "Such a model consists of a series of terms separated by + operators"
+3. The attribute name for the target is "Species"
+4. The feature values come from the data frame "iris"
+5. The value of parameter method is given "class" (and it would be by default since the target column "Species" is a factor).
+
+
+Hopefully it will be beneficial as we continue through the course.
+
+---
+
+This lab is to walk you through the process of visualizing real-world data using the ggplot2 library.
+
+```{r}
+library(ggplot2)
+```
+
+Let's start by loading our data.
+
+```{r}
+df_ratios <- read.csv("http://www.cse.lehigh.edu/~brian/course/2020/datascience/student-teacher-ratios.csv", header=T)
+```
+
+If you look through the data, you'll see that it is data collected by UNESCO showing an entry per country and including the ratio of students to teachers in primary education in that country.  That's the information we are visualizing today.
+
+### Step 1
+
+Let's start examining this data by calculating the world average ratio (i.e., the average across all countries).
+
+```{r}
+
+# PUT YOUR CODE HERE
+avg_ratio <- mean(df_ratios$student_ratio,na.rm = TRUE)
+avg_ratio
+
+```
+
+### Step 2
+
+We can also visualize this with a boxplot.  But since we also know which region of the world each country is in, we can generate a boxplot using qplot for each region within a single plot.
+
+```{r}
+
+# PUT YOUR CODE HERE
+bplot <- qplot(geom="boxplot", data=df_ratios, x=region, y=student_ratio)
+bplot
+
+```
+
+This is nice (and notice the outlier points).  
+
+### Step 3
+
+When visualizing data, it is often helpful to sort the plots by some intuitive measure.  So let's sort by the mean ratio per region and replot.  Since the x axis is ordered by region number (which by default is alphabetical order), we need to reorder the levels of the factor stored in the region vector.  And we want to order them by the student ratio per region (in decreasing order).  The **reorder()** function will reorder a factor by the values of another vector.
+
+You may also have noticed above the warning about removing rows -- this is because some of the entries contain NA values.  This might be a good time to eliminate those as well as otherwise we will see the warning every time we plot.
+
+```{r}
+
+# PUT YOUR CODE HERE
+df_sorted <- reorder(x=df_ratios$region, X=-df_ratios$student_ratio_region, order=is.ordered(df_ratios$region))
+bplot2 <- qplot(geom="boxplot", data=df_ratios, x=df_sorted, y=student_ratio, na.rm=TRUE)
+bplot2
+
+```
+The output from the above code should look much like reference image #1 below.  If you don't see an image below, that may be because you haven't generated a "Preview" which you might want to do now.  Note that once you've generated a first preview, saving your notebook will cause the preview to be updated with the latest code.
+
+> ![Reference Image #1](http://www.cse.lehigh.edu/~brian/course/2020/datascience/ref_image_sorted.png)
+
+### Step 4
+
+Now, while this is nice, let's flip the axes so that the box plots are horizontal instead of vertical, by adding a call to **coord_flip()**.  Also, in most plots, it is good to have the range start with 0 (which we can fix by adding a call to **scale_y_continuous()** and setting the argument **limits** to a vector with the start and end values).
+
+```{r}
+
+# PUT YOUR CODE HERE
+bplot2 + coord_flip() + scale_y_continuous(limits = c(min(df_ratios$student_ratio), max(df_ratios$student_ratio)))
+
+```
+
+### Step 5
+
+We can change the theme of the graphic, too, using **theme_set**.  The following code changes the default background and font size of text.  If you add your plot command after it, you'll see the difference from the plot above.
+
+```{r}
+theme_set(theme_light(base_size = 15)) # Provided to the student
+
+# PUT YOUR CODE HERE
+bplot2
+
+```
+
+### Step 6
+
+Overall, this seems pretty nice, except that the labels on the axes are ugly.  We can replace the default labels using the **labs()** function (where we give as x the x-axis label and y the y-axis label).  Note that x and y correspond to the *original* x and y axes before flipping.  Let's set the x axis to nothing, since the reader can already understand from the region labels that these labels correspond to regions of the world, and set the y axis to "Student to teacher ratio".  
+
+It would also be nice to color the boxplots per region.  We saw how to add a parameter to the **qplot()** function to set color when we were introduced to the ggplot library in class.  Unfortunately, adding color introduces a superfluous legend, which we would like to avoid, which we can do with a **theme(legend.position="none")** addition.
+
+```{r}
+
+# PUT YOUR CODE HERE
+theme_set(theme_light(base_size = 15))
+bplot3 <- qplot(geom="boxplot", data=df_ratios, x=df_sorted, y=student_ratio, na.rm=TRUE, color=region) + labs(x=NULL, y="Student to teacher Ratio") +theme(legend.position="none")  + coord_flip() 
+
+bplot3
+
+
+```
+The above should look much like reference image #2 below.
+
+> ![Reference Image #2](http://www.cse.lehigh.edu/~brian/course/2020/datascience/ref_image_colors.png)
+
+### Step 7
+
+The above is a nice plot, and wouldn't be at all terrible to use in a paper or a website.  But we have a goal of a prettier and even more informative plot.  So let's save everything we've done in a variable **g** so that we can build further upon it, except let's set the **geom** entry to "blank" so that we can plot any kind of geometric object within the same environment simply by adding layers.
+
+```{r}
+
+# PUT YOUR CODE HERE
+g <- qplot(geom="blank", data=df_ratios, x=df_sorted, y=student_ratio, na.rm=TRUE, color=region) + labs(x=NULL, y="Student to teacher Ratio") +theme(legend.position="none")  + coord_flip() 
+
+g
+```
+
+### Step 8
+
+OK.  Given our blank plotting environment, let's plot a particular geometric object.  Simplest is the points themselves.  For that, instead of using a parameter inside of qplot, we add to our existing environment **g** a call to a function **geom_point()**.  
+
+*(When the layer is specified within **qplot()**, we say, for example, **geom="boxplot"**.  If we want a boxplot layer outside of our base layer, we would call **geom_boxplot()**.)*
+
+Just produce a plot (don't store this in another variable).
+
+
+```{r}
+
+# PUT YOUR CODE HERE
+g + geom_point()
+
+```
+
+### Step 9
+
+This is OK, except that we can't tell when one point is on top of another.  To fix that, we want to make each point translucent, which is handled as a parameter to **geom_point()** called **alpha**, which uses values from 0 (invisible) to 1 (solid).  I recommend .15 or .2.  While we are adding parameters, we might also add **size=2** so that we can have slightly larger points.
+
+```{r}
+
+# PUT YOUR CODE HERE
+g+geom_point(alpha=.2, size=2)
+
+```
+
+### Step 10
+
+That's better, but there are still times when overlapping points are hard to distinguish.  Fortunately, there is a variation on geom_points() called **geom_jitter()** which adds some "jitter", i.e., randomness, to the y position of each point.  How much variation is controlled by a parameter called width (I recommend using .2 so that there is no chance that one region's points will be confused with those of another region).
+
+```{r}
+
+# PUT YOUR CODE HERE
+g+ geom_jitter(width = .2,alpha=.2, size=2)
+```
+The above should look much like reference image #3 below.
+
+> ![Reference Image #3](http://www.cse.lehigh.edu/~brian/course/2020/datascience/ref_image_jitter.png)
+
+### Step 11
+
+We can add other layers on top of this.  For example, we could put boxplots on top, by adding **geom_boxplot()** to the code for the prior plot.  As you'll see, whatever layer we create after the prior ones get placed on top, so you might need to reorder your layers to make it look nice.  The boxplots, by default are in black, which might be too heavy along with the points.  Also, outliers from the boxplot might get confused with the existing points.  So we can adjust the color of the boxplot with the parameter **color** (I recommend setting it to "gray60" so it doesn't overwhelm or conflict with the dots), and we can control the transparency of the outliers by parameter **outlier.alpha** (as we can set it to 0 to be invisible).
+
+
+
+```{r}
+
+# PUT YOUR CODE HERE
+g+ geom_jitter(width = .2,alpha=.2, size=2)+ geom_boxplot(color="gray60", outlier.alpha = 0)
+
+```
+
+### Step 12
+
+This plot is pretty decent, except that boxplots are sometimes confusing to the public.  So instead of a boxplot, let's mark the mean of each set of points. There is a function called **stat_summary()** that will apply a function to our data (i.e., as a parameter: **fun.y = mean**) and plot the resulting point for us (as a dot with **geom = "point"**) and I recommend a much larger point size, e.g., 5, so that there is no confusion of this point with the others already there.
+
+```{r}
+
+# PUT YOUR CODE HERE
+g<- g+stat_summary(fun.y = mean, size=3)+ geom_jitter(width = .2,alpha=.2, size=2)
+g
+```
+The above should look much like reference image #4 below.
+
+> ![Reference Image #4](http://www.cse.lehigh.edu/~brian/course/2020/datascience/ref_image_region_mean.png)
+
+### Step 13
+
+Often it is nice to show the global average, too, as a baseline against which we can compare the region average or individual points.  We calculated the world average at the very beginning.  Let's use a straight line (i.e., **geom_hline()** since in the original space it would be a horizontal line).  We need to set the parameter **yintercept** to our world average.  I also suggest setting the color to something other than black (e.g., "gray70" to be similar to the background grid) and the size (i.e., width of the line) to be something a little bigger than the default of .5 (perhaps something between .6 and 1 so that it doesn't look like the background grid).
+
+```{r}
+
+# PUT YOUR CODE HERE
+g <- g + geom_hline(yintercept = avg_ratio, color="gray70", size=.75)
+g
+```
+
+### Step 14
+
+In addition, we'd like to add a line segment from the world average to each of the region averages.  We'll use **geom_segment()**.  To draw a line segment, we need to specify the starting x and y coordinates (as parameters **x** and **y**), and the ending x and y coordinates (as parameters **xend** and **yend**).  Unfortunately, we need to specify them as aesthetic mappings (which means they need to be within a call to **aes()**, as a parameter to geom_segment().  I'm not going to try to explain what aesthetic mappings are today, though.  In the end, here is what I suggest for this layer: **geom_segment(aes(x = region, xend = region, y = world_avg, yend = student_ratio_region), size = 0.8)**.  Let's save all of this into **g2**.
+
+```{r}
+
+# PUT YOUR CODE HERE
+g2 <- g + geom_segment(aes(x = region, xend = region, y = avg_ratio, yend = student_ratio_region), size = 0.8)
+
+g2
+```
+
+### Step 15
+
+You might have noticed that the points show in slightly different places every time you plot them.  That's because jitter is stochastic -- it generates random values every time.  To prevent getting new positions each time, we initialize the random number generator by setting a particular seed (using **set.seed()** prior to the use of jitter).  As long as we use the same seed value, the random numbers will be the same every time we run this code.  At this point, the only other missing factors are some descriptive text and arrows, which is provided below.
+
+At this point it would be nice to add some other descriptive information to this plot.  And yes, this will produce a warning (regarding re-setting the scale for y, which is intentional).
+
+```{r}
+# this code won't run until you've completed the above (i.e., have a correct world_avg defined, etc.)
+arrows <- data.frame(
+  x1 = c(6, 3.65, 1.8, 1.8, 1.8),
+  x2 = c(5.6, 4, 2.07, 2.78, 1.2),
+  y1 = c(avg_ratio + 6, 10.5, 9, 9, 76),
+  y2 = c(avg_ratio + 0.1, 18.32, 14.4, 11.85, 83.41195)
+) 
+
+set.seed(123)
+g2 + 
+    geom_curve(data = arrows, aes(x = x1, y = y1, xend = x2, yend = y2),
+               arrow = arrow(length = unit(0.08, "inch")), size = 0.5,
+               color = "gray20", curvature = -0.3) +
+    annotate("text", x = 6.3, y = 35, size = 2.7, color = "gray20",
+             label = paste("Worldwide average:\n", round(avg_ratio, 1)," students per teacher", sep="")) +
+    annotate("text", x = 3.5, y = 10, size = 2.7, color = "gray20",
+             label = "Continental average") +
+    annotate("text", x = 1.7, y = 11, size = 2.7, color = "gray20",
+             label = "Countries per continent") +
+    annotate("text", x = 1.9, y = 64, size = 2.7, color = "gray20",
+             label = "The Central African Republic has by far\nthe most students per teacher") +
+    scale_y_continuous(limits = c(0, 90), expand = c(0.005, 0.005),
+                       breaks = c(1, seq(20, 80, by = 20))) +
+    labs(caption = "Data: UNESCO Institute for Statistics") +
+    theme(plot.caption = element_text(size = 9, color = "gray50"))
+
+```
+This should look much like reference image #5 below.
+
+> ![Completed Graphic](http://www.cse.lehigh.edu/~brian/course/2020/datascience/ref_image_complete.png)
+
+
+The raw UNESCO data from which this data.frame was derived is available at http://data.uis.unesco.org/index.aspx?queryid=180
+
+Credits: this lab is based on a May 17, 2019 blog post by Cédric Scherer available at https://cedricscherer.netlify.com/2019/05/17/the-evolution-of-a-ggplot-ep.-1/

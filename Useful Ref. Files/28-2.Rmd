@@ -1,0 +1,73 @@
+---
+title: "CSE160 Random Forests Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+
+```{r}
+library(randomForest)
+library(rpart)
+
+# read in data, allow string conversion to factors
+train<-read.csv("http://www.cse.lehigh.edu/~brian/course/2016/datascience/TitanicTrain.csv", as.is = FALSE)
+test<-read.csv("http://www.cse.lehigh.edu/~brian/course/2016/datascience/TitanicTest.csv", as.is = FALSE)
+
+# simply cleanse age and fare
+train$age <- round(train$age,0)
+train$fare <- round(train$fare,0)
+test$age <- round(test$age,0)
+test$fare <- round(test$fare,0)
+
+train$survived <- as.factor(train$survived) # to force classification instead of regression
+test$survived <- as.factor(test$survived)
+```
+
+```{r}
+set.seed(44)
+#build the decision tree
+tree <- rpart(survived ~ pclass + fare + sex + age + embarked, data = train, method = "class")
+
+# build decision forest
+forest <- randomForest(survived ~ pclass + fare + sex + age + embarked,
+                          data = train, importance = TRUE, ntree = 1000, na.action=na.roughfix)
+# plots regression
+# varImpPlot(my_forest)
+
+
+#evaluate tree and forest on training data
+tree.train <- predict(tree, newdata=train, type="class")
+forest.train <- predict(forest, newdata=train)
+
+table.traintree <- table(tree.train, train$survived)
+table.trainforest <- table(forest.train, train$survived)
+
+#calculate accuracies
+accuracy.traintree = sum(diag(table.traintree))/sum(table.traintree) 
+accuracy.trainforest = sum(diag(table.trainforest))/sum(table.trainforest) 
+
+cat("Tree training accuracy: ", accuracy.traintree, "\n")
+cat("Forest training accuracy: ", accuracy.trainforest, "\n")
+```
+
+```{r}
+
+#evaluate tree and forest on test data
+tree.test <- predict(tree, newdata=test, type="class")
+forest.test <- predict(forest, newdata=test)
+
+table.testtree <- table(tree.test, test$survived)
+table.testforest <- table(forest.test, test$survived)
+
+#calculate accuracies
+accuracy.testtree = sum(diag(table.testtree))/sum(table.testtree) 
+accuracy.testforest = sum(diag(table.testforest))/sum(table.testforest) 
+
+cat("Tree test accuracy: ", accuracy.testtree, "\n")
+cat("Forest test accuracy: ", accuracy.testforest, "\n")
+
+```
+
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).

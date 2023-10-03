@@ -1,0 +1,57 @@
+---
+title: "Lab 4 - MATH 312"
+author: "Rishi Gummakonda"
+date: "9/14/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+```
+
+## Question 1
+
+Use the sample() function and generate a random sample from 1 to 6 with size 1000 and with replacement.
+
+
+```{r}
+
+sample(1:6, size=1000, replace=TRUE)
+
+```
+
+## Question 2
+
+Use the inverse transform method to simulate a random sample from the distribution with density fX (x) = 5x4, 0 < x < 1. Sample size is 1000. Use histogram and density plot to check your algorithm.
+
+
+```{r}
+n <- 1000
+u <- runif(n)
+x <- u^(1/5)
+hist(x, prob=T)
+y <- seq(0,1, 0.01)
+lines(y,3*y^2)
+```
+
+
+## Question 3
+
+
+Use the inverse transform method to simulate a random sample from Bernoulli(p=0.7). Sample size is 1000. Use mean and variance to check your algorithm.
+
+
+```{r}
+# Example 3.4
+n <- 1000
+p <- 0.7
+u <- runif(n)
+x <- as.integer(u > 0.3)
+
+mean(x)
+p
+var(x)
+p*(1-p)
+
+```

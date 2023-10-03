@@ -1,0 +1,45 @@
+---
+title: "GroupProject 1"
+author: "Rishi Gummakonda"
+date: "11/2/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+
+## Example 7.7 (Empirical Type I Error Rate)
+#Exponential
+set.seed(1000)
+n <- 20
+alpha <- 0.05
+mu0 <- 1
+
+m <- 10000  #number of replicates
+p <- numeric(m)  #storage for p-value
+for (j in 1:m){
+  x <- rexp(n, mu0)
+  ttest <- t.test(x, alternative = "two.sided", mu=mu0)
+  #use two sided because we 
+  p[j] <- ttest$p.value
+}
+
+p.hat <- mean(p <= alpha)
+print(p.hat)
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

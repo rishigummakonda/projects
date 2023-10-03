@@ -1,0 +1,29 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+```{r}
+library("rvest")
+# read the page for 18015
+htmlpage <- read_html("http://forecast.weather.gov/MapClick.php?lat=40.65660050560996&lon=-75.37807501355024#.VxLJIZMrJ24")
+forecasthtml <- html_nodes(htmlpage, "#detailed-forecast-body b , .forecast-text")
+forecast <- html_text(forecasthtml)
+paste(forecast, collapse =" ")
+```
+
+Put the content into a dataframe instead
+```{r}
+l <- length(forecast)/2
+df <- data.frame(matrix(NA, nrow=l, ncol = 0)) # empty dataframe with l rows and 0 columns
+
+for (i in 1:l) {
+  df$when[i] <- forecast[i*2-1]
+  df$what[i] <- forecast[i*2]
+} 
+df
+```
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).

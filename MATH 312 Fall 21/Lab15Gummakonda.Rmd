@@ -1,0 +1,64 @@
+---
+title: "Lab15Rishi"
+author: "Rishi Gummakonda"
+date: "11/4/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+```{r}
+library(bootstrap)
+set.seed(1235)
+#correlation between LSAT and GPA scores
+print(cor(law82$LSAT,law82$GPA))
+
+#set up bootstrap
+B <- 200
+n <- nrow(law)
+R <- numeric(B)
+#bootstrap estimate of standard error of R
+for (b in 1:B) {
+i <- sample(1:n,size = n,replace = T)
+LSAT <- law82$LSAT[i]
+GPA <- law82$GPA[i]
+R[b] <- cor(LSAT, GPA)
+}
+print(se.R <- sd(R))
+
+#bootstrap estimate of bias
+theta.hat <- cor(law82$LSAT,law82$GPA)
+B <- 2000
+n <- nrow(law)
+theta.b <- numeric(B)
+for (i in 1:B) {
+i <- sample(1:n,size=n,replace=T)
+LSAT <- law82$LSAT[i]
+GPA <- law82$GPA[i]
+theta.b <- cor(LSAT,GPA)
+}
+bias <- mean(theta.b-theta.hat)
+bias
+
+```
+
+## Question 2
+
+```{r}
+set.seed(1145)
+library(boot)
+r <- function(x, i){
+cor(x[i,1],x[i,2])
+}
+obj <- boot(data = law82, statistic = r, R=2000)
+#display bootstrap estimate of the standard error and bias of the sample correlation
+obj
+
+
+
+```
+

@@ -1,0 +1,23 @@
+---
+title: "Lab 16"
+author: "Rishi Gummakonda"
+date: "11/23/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+
+```{r cars}
+set.seed(1000)
+library(boot)
+data(law82, package = "bootstrap")
+boot.obj <- boot(law82, R=2000, statistic = function(x,i){cor(x[i,1],x[i,2])})
+print(boot.ci(boot.obj, type = c("basic","norm","perc")))
+
+```
+

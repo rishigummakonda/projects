@@ -1,0 +1,102 @@
+---
+title: "CSE160 Lab: Word Clouds and Topic Models"
+output: html_notebook
+author: Brian Davison
+date: 2 November 2020
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+=============================================================
+
+# Building word clouds from large text
+
+This part is mostly doing things that we have seen in class, but you might need to look up how to do them, or how to use options that you have not used before. Start by creating a new R notebook in RStudio. (If notebooks cause your RStudio to crash, it is ok to create an R script.)
+Since we will be producing wordclouds, you'll need to load the libraries for text mining and for plotting wordclouds.
+
+For this task, we will use the data from http://archive.ics.uci.edu/ml/datasets/NIPS+Conference+Papers+1987-2015 which is the Term by Document matrix for over 5,000 papers and more than 11,000 terms published at the NeurIPS conferences from 1987 to 2015. **Don't bother downloading from there as we have local copies.**
+
+Our goal will be to produce a wordcloud representing the most frequent words from those conference papers. But until you are ready, using the full dataset is likely to be very slow and might not even run on some machines. So we will start with a smaller dataset with only 100 documents (same set of terms). You can download the 2.3MB small datafile from http://www.cse.lehigh.edu/~brian/course/2020/datascience/Conf_small.csv. (When you are ready, you can download the 127MB large dataset from http://www.cse.lehigh.edu/~brian/course/2020/datascience/Conf_1987-2015.csv.) Since this is a csv file, you know how to read it into R. **Note how the first column is the word name, and the remaining columns are the frequencies of the words in each document.**
+
+If you recall how we created wordclouds in class, we first built a corpus of documents, then cleaned the words of that corpus, and then built a term-document matrix. If you think about the data in the csv file you just read, you'll notice that it is also a term-document matrix (but you will have loaded it into a dataframe). That's OK, as all we really need for the wordcloud is the sorted vector of words and the frequencies of those words, and you can calculate and extract those from your dataframe similarly to the way we did from a matrix in the wordcloud example previously.
+
+Once you have done that, you should be ready to produce your wordcloud. However, before you do, I recommend that you read the documentaion about the wordcloud() function, as it contains some options that filter words with less than a given term frequency, and/or limit the number of words that you plot to the most common n words. These kinds of filters are needed, as recall that the data we are working with has over 11,000 terms -- we can't plot anywhere near that many words in our wordclouds!
+
+So now your goal is to adjust the parameters to wordcloud() so that you can produce a reasonable cloud without generating any warnings about words that cannot be plotted. Once you have succeeded with the small dataset (with code that runs quickly), you can try the full dataset.
+
+```{r}
+library(tm)
+library(wordcloud)
+library(topicmodels)
+
+
+data <- read.table("http://www.cse.lehigh.edu/~brian/course/2020/datascience/Conf_small.csv", sep =",", header = T)
+data
+data <- data.frame(data[,-1], row.names = data[,1])
+data
+
+matrix <- as.matrix(data)
+#most frequent words
+sorted <- sort(rowSums(matrix), decreasing = TRUE)
+cloudFrame <- data.frame(word=names(sorted), freq=sorted)
+wordcloud(cloudFrame$word, cloudFrame$freq, scale=c(3,0.5), max.words =120, colors=c("red","green", "purple", "blue"), rot.per=.2, min.freq=.4)
+
+```
+
+=============================================================
+
+# Topic Models
+
+While the word cloud gave us a sense of the most popular terms in the corpus, it didn't really help us understand the popular topics in those papers. So let's use topic modeling to find the topics. This method is rather complex, and you would need to spend quite a bit of time studying it to really understand it. We are just going to use it, based on the guidelines provided [here](https://eight2late.wordpress.com/2015/09/29/a-gentle-introduction-to-topic-modeling-using-r/).
+
+Not only is this method complex, it is computationally expensive (read very slow!), but fortunately doesn't seem to be too heavy on memory needs. On the small data dataset, it took close to 9 minutes on an old desktop (and about seven on my  laptop and 3-4 on my newer desktop) to run using the default parameters described below. So **don't run it on the full data unless you are willing to let it run for hours**.
+
+That said, here is how to run it. First, we'll need the **topicmodels** library. Second is that we might want to filter our dataframe to eliminate low frequency words (which you can figure out how to do, cutting the number of words in half or more for the small dataset) and then convert it into a document-term matrix: `dtm <- as.DocumentTermMatrix(t(tdm), weightTf)`. (Here **weightTf** is a special keyword for this library, and tdm is my term-document dataframe. You should look up what `t()` does.)
+
+```{r}
+
+data$rowsum<- rowSums(data)
+data
+sortedData <- data[order(-data$rowsum),]
+sortedData
+
+half_len <- 0.5*nrow(sortedData)
+len <- nrow(sortedData)
+tmd <- sortedData[-c(half_len:len)]
+tmd
+
+
+dtm <- as.DocumentTermMatrix(t(tmd), weightTf)
+dtm
+
+```
+
+For LDA topic modeling, we'll need to set a number of parameters:
+
+```{r}
+#Set parameters for Gibbs sampling
+burnin <- 4000
+iter <- 2000
+thin <- 500
+seed <-list(2003,5,63)
+nstart <- 3
+best <- TRUE
+
+#Number of topics
+k <- 10
+```
+
+Then you can run LDA (the form of topic modeling that I mentioned in class), and walk away, either to get coffee (small data) or to take a nap (large data).
+
+```{r}
+#Run LDA using Gibbs sampling
+ldaOut <-LDA(dtm,k, method="Gibbs", control=list(nstart=nstart, seed = seed, best=best, burnin = burnin, iter = iter, thin=thin))
+#Capture the top 20 terms for each topic
+ldaOut.terms <- as.matrix(terms(ldaOut,20))
+```
+y
+Note that if you choose to run on the full dataset, some of the documents do not appear to have any terms in them, and LDA will complain. So you'll have to remove them from the document-term matrix. When I ran this on an old desktop, it took about 3GB of RAM and more than 10 hours of compute time.
+
+When you get some results, **look at the terms produced for each topic**.  Do the topics generally look different from each other? Do they make any sense? (They might not, as these are very technical documents and you might not understand the terms used.)

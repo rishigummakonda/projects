@@ -1,0 +1,125 @@
+---
+title: "Homework6Gummakonda"
+author: "Rishi Gummakonda"
+date: "10/14/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+
+```{r }
+#by sampling from uniform distribution
+m <- 10000
+x <- runif(m, min=0, max=0.5) 
+h <- exp(-x)
+theta.hat <- mean(h)*(0.5) 
+#print monte carlo estimate 
+print(theta.hat)
+```
+
+```{r}
+#by sampling from the exponential distribution
+y <- rexp(m)
+g <- ((exp(-y))*(y>0)*(y<0.5))/(exp(-y))
+theta.hat2 <- mean(g)
+#print monte carlo estimate 
+print(theta.hat2)
+```
+
+```{r}
+#variance from first monte carlo estimate
+var.theta.hat <- mean((h-mean(h))^2)/m 
+#print variance
+print(var.theta.hat)
+```
+
+```{r}
+#variance from second monte carlo estimate
+var.theta.hat2 <- mean((g-mean(g))^2)/m 
+#print variance
+print(var.theta.hat2)
+```
+
+
+## Question 2
+
+```{r}
+#by simple Monte Carlo method
+m <- 10000
+x <- runif(m)
+y <- exp(x)
+theta.hat <- mean(y)
+print(theta.hat)
+```
+
+
+```{r}
+#by antithetic variate approach
+u <- runif(m/2)
+y1 <- exp(u)
+y2 <- exp(1-u)
+y3 <- (y1+y2)/2
+theta2.hat <- mean(y3)
+# print estimate using antithetic variate approach 
+print(theta2.hat)
+
+#percent reduction
+print((var(y)-var(y3))/var(y))
+```
+
+
+## Question 3
+
+```{r}
+#by antithetic variate approach
+m <- 10000
+u <- runif(m/2)
+y1 <- exp(-u)/(1+u^2)
+y2 <- exp(-(1-u))/(1+(1-u)^2)
+y3 <- (y1+y2)/2
+theta.hat <- mean(y3)
+#print estimate using antithetic variate approach 
+print(theta.hat)
+
+x <- runif(m)
+y <- exp(-x)/(1+x^2)
+
+print((var(y)-var(y3))/var(y))
+
+```
+
+## Question 4
+
+```{r}
+h <- function(x){
+(x^2 * exp(-x^2/2))/sqrt(2*pi)*(x > 1)
+}
+f1 <- function(x){
+exp(-x) }
+f2 <- function(x){ (pi*(1+x^2))^(-1)*(x >= 1)
+}
+m <- 100000
+y1 <- rexp(m)
+
+y2 <- rcauchy(m)
+y2[which(y2 < 1)] <- 1
+#Monte Carlo estimates
+theta.hat <- mean(h(y1)/f1(y1))
+theta.hat2 <- mean(h(y2)/f2(y2))
+print(theta.hat)
+print(theta.hat2)
+
+#print variances
+se <- sd(h(y1)/f1(y1))
+se2 <- sd(h(y2)/f2(y2))
+print(se)
+print(se2)
+
+#f1 produces similar variance
+```
+

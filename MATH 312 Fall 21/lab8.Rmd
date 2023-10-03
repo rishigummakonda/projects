@@ -1,0 +1,26 @@
+---
+title: "Lab 8"
+author: "Rishi Gummakonda"
+date: "9/28/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#===============================#
+#=== Monte Carlo Integration ===#
+#===============================#
+
+# Example 6.1
+m <- 10000
+x <- runif(m)
+equation <- sin(x) *exp(-x/3)
+theta.hat <- mean(equation)
+print(theta.hat)
+
+```
+

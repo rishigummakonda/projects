@@ -1,0 +1,125 @@
+---
+title: "Project1"
+author: "Matthew Piriya, Rishi Gummakonda, Justin Angelel"
+date: "10/31/2021"
+output: pdf_document
+---
+#T-Test Summary:
+
+#Simulation Settings and Code Organization:
+
+Each of our codes were based off of example 7.7 from the reference R code titled
+“R Code for Monte Carlo Method in Inference”. We set our alpha or test level to 
+0.5. We also set our sample size to 20 and our number of simulations to 1000. 
+This way all three simulations we did were conducted under the same 
+circumstances and all we were truly comparing was the different distributions.
+
+The code is structured so that variables alpha, n and m are set before the loop
+that does the simulation. An array p is also declared to store the p value for 
+each iteration of the simulation. Then the loop iterates m times. Within each 
+iteration of the loop, the sample of the distribution ($\chi^2$, Uniform or 
+exponential) is taken and the two sided t test is performed. Then the p value
+is stored in the array p. Following completion of the loop, the p.hat value
+is computed along with the squared error for the simulation.
+
+#Findings and Analysis:
+ 
+For the Chi-Squared distribution, we set the mean to 1 because the expected mean
+is equal to the degrees of freedom, which is also 1. Then by running 1000 Monte
+Carlo simulations of taking 20 random samples from the Chi Squared Distribution,
+we found the empirical Type I Error Rate to be 0.09, with a standard error of 
+0.009. The Type I Error Rate differed from 0.05 by more than one standard error,
+and thus, we can say that the t-test is not robust enough to accommodate for the
+departure from normality, or in other words, the $\chi^2$ distribution cannot be
+used in place of a normal distribution when taking random samples.
+
+For the Uniform distribution, the process was largely similar, but we instead 
+used the Uniform(0, 2) distribution, which also has a mean of 1. Similarly, we
+ran 1000 Monte Carlo Simulations of 20 random samples from the uniform distribution,
+and found the empirical Type I Error Rate to be 0.045, with a standard error of
+0.0066. This time, the empirical Type I Error Rate differed from 0.05 by less
+than one standard error, which indicates that the t-test is robust enough to 
+the departure from normality between a uniform distribution and a normal one.
+
+For the Exponential distribution, the true mean is still 1, and through the same
+process, we found the empirical Type I Error Rate to be 0.075, with a standard
+error of 0.0083. Because the Type I Error Rate differed from 0.05 by more than 
+one standard error, similar to the $\chi^2$ distribution, we can say that the 
+t-test is not robust enough to accommodate for the departure from normality to
+the exponential distribution. 
+
+#Appendix with R code:
+
+# i.
+```{r}
+set.seed(1234)
+
+# based on example 7.7
+# number of monte carlo simulations
+m <- 1000
+# make a vector of length m
+p <- numeric(m)
+# expected alpha value
+alpha <- 0.05
+
+for (i in 1:m){
+  # sample from chi square distribution
+  u <- rchisq(n=20, df=1)
+  # u <- rexp(20,1)
+  
+  # run t test on u, compare to desired mu = 1
+  ttest <- t.test(u, mu=1, alternative="two.sided")
+
+  # store p value
+  p[i] <- ttest$p.value
+}
+# p(Type 1 error) at alpha = .05
+p.hat <- mean(p < alpha)
+se.hat <- sqrt(p.hat*(1-p.hat)/m)
+print(c(p.hat, se.hat))
+```
+
+## ii.
+```{r}
+#Code modified from example 7.7
+set.seed(1234) #set seed so results are repeatable
+n <- 20 # sample size
+alpha <- 0.05 
+mu0 <- 1 #compare to mean of 10,000 runiform instances
+
+m <- 1000  #number of replicates
+p <- numeric(m)  #storage for p-value
+for (j in 1:m){ #run m simulations
+  x <- runif(n, 0, 2) #create sample
+  ttest <- t.test(x, alternative = "two.sided", mu=mu0) #run t-test
+  p[j] <- ttest$p.value #store p value
+}
+
+p.hat <- mean(p < alpha)
+se.hat <- sqrt(p.hat*(1-p.hat)/m)
+print(c(p.hat, se.hat))
+```
+
+## iii.
+```{r}
+## Example 7.7 (Empirical Type I Error Rate)
+#Exponential
+set.seed(1234)
+n <- 20
+alpha <- 0.05
+mu0 <- 1
+
+m <- 1000  #number of replicates
+p <- numeric(m)  #storage for p-value
+for (j in 1:m){
+  x <- rexp(n, mu0)
+  ttest <- t.test(x, alternative = "two.sided", mu=mu0)
+  #use two sided because we 
+  p[j] <- ttest$p.value
+}
+
+p.hat <- mean(p < alpha)
+se.hat <- sqrt(p.hat*(1-p.hat)/m)
+print(c(p.hat, se.hat))
+```
+

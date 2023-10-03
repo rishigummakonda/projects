@@ -1,0 +1,150 @@
+---
+title: "Group Project 2"
+author: "Peipei Wang, Yihao (Kyle) Wang, Rishi Gummakonda"
+date: "11/23/2021"
+output:
+  bookdown::pdf_document2:
+    latex_engine: lualatex
+  tufte::tufte_handout:
+    latex_engine: xelatex
+---
+
+# Breif Introduction:
+The standard normal bootstrap confidence interval, the basic bootstrap confidence interval, and the bootstrap percentile confidence interval are approaches to obtaining approximate confidence intervals for the target parameter in a bootstrap. 
+
+## Standard Normal Bootstrap Confidence Interval:
+
+The standard normal bootstrap confidence interval is the simplest approach, but not necessarily the best. Suppose that $\Theta$^ is an estimator of parameter, and assume the standard error of the estimator is se($\Theta$^). If $\Theta$^ is a sample mean and the sample size is large, then the Central Limit Theorem implies that Z = =^ - E(^)se(^) is approximately standard normal. Hence, if $\Theta$^ is unbiased for $\Theta$, then an approximate 100(1 − $\alpha$)% confidence interval for is the Z-interval $\Theta$ˆ± Z$\alpha$/2se( $\Theta$^) where Z$\alpha$/2 = $\phi$-1(1 – $\alpha$/2). The assumptions is the distribution of $\Theta$^ is normal or $\Theta$^ is a sample mean and the sample size is large. We have also implicitly assumed that $\Theta$^ is unbiased for $\Theta$. In this case, the population mean ($\Theta$ = 0), and the statistic $\Theta$^ is the sample mean x. 
+
+
+## The Basic Bootstrap Confidence Interval: 
+The basic bootstrap confidence interval or pivotal CI transforms the distribution of the replicates by subtracting the observed statistic. The quantiles of the transformed sample $\Theta$^* − $\Theta$^ are used to determine the confidence limits. For a symmetric 100(1− $\alpha$)% confidence interval (L,U) for $\Theta$ based on the bootstrap replicates, we require that Pr(L) =Pr⁡(U  )= /2. So finally, the basic bootstrap confidence interval is (L,U) = (2$\Theta$^ − $\Theta$^ * 1-$\alpha$/2, 2θ^ − $\Theta$^ * $\alpha$/2). 
+
+
+## The Percentile Bootstrap Confidence Interval:
+A bootstrap percentile interval uses the empirical distribution of the bootstrap replicates as the reference distribution. The quantiles of the empirical distribution are estimators of the quantiles of the sampling distribution of $\Theta$^, so that these (random) quantiles may match the true distribution better when the distribution of $\Theta$^ is not normal. Suppose that $\Theta$^(1), . . . , $\Theta$^(B) are the bootstrap replicates of the statistic $\Theta$^. From the ecdf of the replicates, compute the $\alpha$/2 quantile $\Theta$ˆ$\alpha$/2, and the 1 − $\alpha$/2 quantile $\Theta$ˆ1−$\alpha$/2. 
+
+
+# Simulation Plan/Settings: 
+1. Create a function theta.boot() to compute the statistic.
+2. Create three matrices to store the upper and lower bound for the three bootstrap confidence interval methods. 
+3. Use the seed function to generate reproducible results and library(boot) in order to use boot.ci() function.
+4. Use a for loop to run 1000 times, inside the for loop call boot.ci function to calculate the intervals and store the upper and lower bound into the corresponding matrix. 
+5. Check the empirical coverage rate by finding the results that have lower bound less then 0 and upper bound greater than 0. 
+6. Find the proportions of times that the confidence intervals miss on the left, and the proportion of times that the confidence intervals miss on the right by find the lower bound is greater than 0 and upper bound is less than 0. 
+
+# Simulation Analysis and Results:
+The goal of conducting these Monte Carlo simulations is to estimate the coverage probability of different bootstrap intervals. Coverage probabilities represent the number of times that the confidence interval contains the true value, therefore a higher coverage probability, the better the simulation performed. The Standard Normal bootstrap simulation generates a 0.944 empirical rate, while the basic bootstrap generated 0.941, and the percentile bootstrap generated 0.94. All three empirical rates are very close to the target value of 0.95, indicating that the simulations were successful. Additionally, the calculation of proportions of times that the confidence intervals miss the left and right also supports this. On the right, the simulations missed at a 0.029 rate, .03 rate, and .031 rate respectively. On the left, they missed at a 0.027 rate, 0.029 rate, and 0.029 rate respectively. Given these results, we can say that for our target parameter, the simplest simulation - the Standard Normal Bootstrap performed the best.
+
+
+
+# Appendix:
+
+## Task Allocation:
+
+* Peipei - wrote all the code.
+* Yihan (Kyle)-wrote the introduction paragraphs and the simulation plan/settings section
+* Rishi-wrote the findings of the simulation and analyze the results, complied the markdown file
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+```
+
+## Setting it up
+```{r}
+
+library(boot)
+theta.boot<-function(dat,ind){ #function to compute statistic
+  mean(dat[ind])
+}
+
+# create matrix to store the upper bound and lower bound
+int.norm<-matrix(rep(0,2000),nrow=1000) 
+int.basic<-matrix(rep(0,2000),nrow=1000)
+int.perc<-matrix(rep(0,2000),nrow=1000)
+
+set.seed(001) # set seed to generate reproducible results
+for(i in 1:1000){ #run 1000 times and store the value into the matrix
+  x<-rnorm(20)
+  boot.obj<-boot(x,statistic=theta.boot,R=2000)
+  i.norm<-boot.ci(boot.obj,type="norm")
+  int.norm[i,]<-i.norm$normal[2:3] #column value we want is at the second and third column
+  i.basic<-boot.ci(boot.obj,type="basic")
+  int.basic[i,]<-i.basic$basic[4:5] #the value we want is at the forth and fifth column
+  i.perc<-boot.ci(boot.obj,type="perc")
+  int.perc[i,]<-i.perc$percent[4:5] #the value we want is at the forth and fifth column
+}
+
+```
+
+
+## Part A
+```{r}
+
+cat("Checking the Emperical Coverage Rates for 95% Confidence Intervals:","\n\n")
+#standard normal bootstrap CI
+t<-numeric()
+for(i in 1:1000){
+  if(int.norm[i,1]<0 & int.norm[i,2]>0) t[i]<-1 else t[i]<-0
+}
+cat ("Standard Normal Bootstrap CI:", '\n')
+cat("empirical coverage rate=",sum(t)/1000,'\n\n')
+
+#basic bootstrap CI
+t<-numeric()
+for(i in 1:1000){
+  if(int.basic[i,1]<0 & int.basic[i,2]>0) t[i]<-1 else t[i]<-0
+}
+cat ("Basic Bootstrap CI:", '\n')
+cat("empirical coverage rate=",sum(t)/1000,'\n\n')
+
+#percentile CI
+t<-numeric()
+for(i in 1:1000){
+  if(int.perc[i,1]<0 & int.perc[i,2]>0) t[i]<-1 else t[i]<-0
+}
+cat ("Percentile CI:", '\n')
+cat("empirical coverage rate=",sum(t)/1000,'\n')
+
+```
+
+## Part B
+```{r}
+
+cat('Estimating Porportion of Times Confidence Interval Misses:','\n\n')
+#standard normal bootstrap CI
+r<-numeric() #miss on the right
+l<-numeric() #miss on the left
+for(i in 1:1000){
+  if(int.norm[i,1]>0) l[i]<-1 else l[i]<-0
+  if(int.norm[i,2]<0) r[i]<-1 else r[i]<-0
+}
+cat ("Standard Normal Bootstrap CI:", '\n')
+cat("miss on the right:",sum(r)/1000,'\n')
+cat("miss on the left:",sum(l)/1000,'\n','\n')
+
+#basic bootstrap CI
+r<-numeric() #miss on the right
+l<-numeric() #miss on the left
+for(i in 1:1000){
+  if(int.basic[i,1]>0) l[i]<-1 else l[i]<-0
+  if(int.basic[i,2]<0) r[i]<-1 else r[i]<-0
+}
+cat ("Basic Bootstrap CI:", '\n')
+cat("miss on the right:",sum(r)/1000,'\n')
+cat("miss on the left:",sum(l)/1000,'\n', '\n')
+
+#percentile CI
+r<-numeric() #miss on the right
+l<-numeric() #miss on the left
+for(i in 1:1000){
+  if(int.perc[i,1]>0) l[i]<-1 else l[i]<-0
+  if(int.perc[i,2]<0) r[i]<-1 else r[i]<-0
+}
+cat ("Percentile CI:", '\n')
+cat("miss on the right:",sum(r)/1000,'\n')
+cat("miss on the left:",sum(l)/1000,'\n','\n')
+
+```
+

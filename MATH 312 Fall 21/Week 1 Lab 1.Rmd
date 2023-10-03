@@ -1,0 +1,23 @@
+---
+title: "Week 1 Lab 1"
+author:
+output: pdf_document
+---
+
+## Output with R code
+Explanation or comment to the code
+
+```{r}
+
+
+```
+
+## Output without R code
+Explanation or comment to the code
+
+```{r pressure, echo=FALSE}
+
+
+```
+
+

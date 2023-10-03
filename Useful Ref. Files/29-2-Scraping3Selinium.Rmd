@@ -1,0 +1,39 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+```{r}
+library(RSelenium)
+rD <- rsDriver(browser = "firefox")
+# first time you run this, it might download a bunch of drivers
+mybrowser <- rD[["client"]]
+```
+
+```{r}
+mybrowser$navigate("http://www.google.com/")
+#searchbar <- mybrowser$findElement(using='name’,value='q')
+#searchbar <- mybrowser$findElement(using='css',value='#lst-ib')
+searchbar <- mybrowser$findElement(using='css',value='.gsfi')
+searchbar$sendKeysToElement(list('selenium', key='enter'))
+```
+
+```{r}
+mybrowser$goBack() # equivalent to the back button
+```
+
+```{r}
+mybrowser$navigate("http://www.weather.gov")
+
+wxbox <- mybrowser$findElement(using="css selector", "#inputstring")
+wxbox$clickElement() # to clear the current contents
+wxbox$sendKeysToElement(list("18015")) # adds to any existing text
+
+Sys.sleep(1) # wait one second
+wxbutton <- mybrowser$findElement(using = "css selector", "#btnSearch")
+wxbutton$clickElement()
+```
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).

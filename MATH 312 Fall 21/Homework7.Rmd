@@ -1,0 +1,110 @@
+---
+title: "Homework7"
+author: "Rishi Gummakonda"
+date: "10/28/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1 (7.1)
+
+```{r}
+
+m = 1000
+n = 20
+k = 1
+mse = numeric(9)
+
+while(k < 10){
+  tmean = numeric(m)
+  for(i in 1:m){
+    x = sort(rcauchy(n))
+    tmean[i] = median(x)
+  }
+  
+  mse[k] = mean(tmean^2)
+  k = k + 1
+}
+rbind(mse)
+
+
+```
+
+## Question 2 (7.6)
+
+
+```{r}
+
+    n <- 20
+    alpha <- .05
+    UCL <- replicate(1000, expr = {
+        x <- rnorm(n, mean = 0, sd = 2)
+        (n-1) * var(x) / qchisq(alpha, df = n-1)
+        } )
+    #count the number of intervals that contain sigma^2=4
+    sum(UCL > 4)
+    #or compute the mean to get the confidence level
+    mean(UCL > 4)
+
+```
+
+
+## Question 3
+
+```{r}
+
+m <- 1000
+g <- numeric(m)
+for (i in 1:m) {
+x1 <- rnorm(1)
+x2 <- rnorm(1)
+x3 <- rgamma(1,3,2)
+x4 <- rgamma(1,3,2)
+g[i] <- abs((x1+x2)^2-(x3+x4)^2)
+}
+(est <- mean(g))
+
+```
+
+
+## Question 4
+
+```{r}
+n <- 20
+x <- rbinom(n,1,0.6)
+num_success <- sum(x)
+result <- prop.test(num_success,n,p=0.6,alternative = "two.sided",conf.level = 0.90)
+result$conf.int
+
+#monte carlo estimate of confidence level
+n <- 20
+alpha <- 0.1
+UCL <- replicate(1000, expr = {
+x <- rbinom(n,1,0.6)
+found_prop <- sum(x)/n
+(n-1)*(found_prop*(1-found_prop)/n)/qchisq(alpha,df=n-1)
+})
+mean(UCL > 4)
+```
+
+
+## Question 5
+
+```{r}
+n <- 20
+prob0 <- 0.7
+m <- 10000
+p <- numeric(m) #p-value
+for (j in 1:m) {
+x <- rbinom(n,1,prob0)
+num_succ <- sum(x)
+pproptest <- prop.test(num_succ,20,p=0.7,alternative = "two.sided",conf.level = 0.95)
+p[j] <- pproptest$p.value
+}
+p.hat <- mean(p < alpha)
+print(p.hat)
+```
+

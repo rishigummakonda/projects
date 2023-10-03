@@ -1,0 +1,102 @@
+---
+title: "CSE160: Time Series Examples"
+author: Brian D. Davison
+date: October 18, 2020 
+output: html_notebook
+---
+
+In this R Notebook, we consider some more traditional approaches to analyze time series data.
+
+============================================
+
+Let's get some timeseries data.  This is the number of births per month in New York city, from January 1946 to December 1959 (originally collected by Newton). This data is available in the file http://robjhyndman.com/tsdldata/data/nybirths.dat
+
+There is a built-in time series package ***ts*** (and other non-built-in packages) for manipulating timeseries.  So we will put this data into the time series format.
+
+```{r}
+births <- scan("http://robjhyndman.com/tsdldata/data/nybirths.dat")
+birthstimeseries <- ts(births, frequency=12, start=c(1946,1))
+birthstimeseries
+```
+
+We can plot it, and add the best fit linear model.
+
+```{r}
+plot(birthstimeseries)
+abline(reg=lm(birthstimeseries ~ time(birthstimeseries)), col="blue")
+```
+
+There are many kinds of analyses we can do with a time series.  But a basic one is to break out a seasonal time series in terms of its overall trend, a repeated seasonal component, and a random component.
+
+The time series of the number of births per month in New York city is seasonal with a peak every summer and trough every winter:
+
+```{r}
+tscomponents <- decompose(birthstimeseries)
+plot(tscomponents)
+```
+
+The plot above shows the original time series (top), the estimated trend component (second from top), the estimated seasonal component (third from top), and the estimated irregular component (bottom). We see that the estimated trend component shows a small decrease from about 24 in 1947 to about 22 in 1948, followed by a steady increase from then on to about 27 in 1959.
+
+If we want to see the timeseries after removing the seasonal component (seasonally adjusted), we can do that easily.
+
+```{r}
+tsseasonallyadjusted <- birthstimeseries - tscomponents$seasonal
+plot(tsseasonallyadjusted)
+abline(reg=lm(tsseasonallyadjusted ~ time(tsseasonallyadjusted)), col="blue")
+```
+
+
+Instead of looking at the original time series, we could also consider the time series of the changes (the differences) between successive values.
+
+```{r}
+diffts <- diff(birthstimeseries)
+plot(decompose(diffts))
+```
+
+Credits for the above example (and lots more information): https://a-little-book-of-r-for-time-series.readthedocs.io/en/latest/src/timeseries.html
+
+============================================
+
+Back in one of our early homework assignments, we defined this vector.
+
+```{r}
+vector <- c(133.130219, 132.22319, 130.812653, 153.723282, 124.999298, 117.746117, 118.290627, 116.763412, 132.961868, 131.779541, 140.638748, 141.427536, 135.600342, 135.04184, 124.310944, 121.856476, 105.877823, 135.43721, 144.251053, 147.603439, 112.307724, 129.810013, 125.087288, 134.321198, 132.608734, 140.332169, 140.010818, 139.984406, 155.188583, 140.900116, 142.225311, 141.717285, 161.165863, 156.075058, 143.661835, 138.132843, 139.218826, 130.928864, 130.812302, 132.68721, 151.21312, 110.04641, 119.983032, 109.748711, 145.360672, 143.121918, 135.220978, 133.279465, 131.760971, 136.693756, 139.648239, 144.157669, 129.782883, 134.918777, 137.819733, 137.009018, 125.511147, 136.294083, 146.513687, 135.529999)
+```
+
+These correspond to a particular stock's price each month.
+
+```{r}
+myts <- ts(vector, start=c(2014,10), frequency=12)
+plot(myts)
+abline(reg=lm(myts ~ time(myts)), col="blue")
+```
+
+Here are the (seasonal) components of this series.
+
+```{r}
+tscomponents <- decompose(myts)
+plot(tscomponents)
+```
+
+And after removing the seasonal component:
+
+```{r}
+tsseasonallyadjusted <- myts - tscomponents$seasonal
+plot(tsseasonallyadjusted)
+abline(reg=lm(tsseasonallyadjusted ~ time(tsseasonallyadjusted)), col="blue")
+```
+
+
+And the time series of diffs:
+
+```{r}
+diffts <- diff(myts)
+plot(decompose(diffts))
+```
+
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).

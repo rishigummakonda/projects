@@ -1,0 +1,288 @@
+---
+title: "In-Class Laboratory for CSE 160: Introduction to Data Science"
+output: html_notebook
+---
+
+### This version by Prof. Davison
+### Last edit: 22 September 2020
+ 
+You will be
+
+- Getting started with the data.world R package
+- Using SQL to get datasets
+- Learning how to merge tables
+- Examining sample datasets, simple operations and plotting
+
+---------------
+
+## Interesting Sources of Data
+
+Even without being part of an organization that is actively collecting data, there are many sources of interesting data:
+
+- Jeremy Singer-Vine's [Data Is Plural](https://tinyletter.com/data-is-plural) newsletter of useful/curious datasets.  Follow the link to a Google Sheet of archived datasets from his newsletter.
+- The U.S. Government's open data at [data.gov](https://data.gov/).
+- [Google's Dataset Search](https://toolbox.google.com/datasetsearch)
+- The data-sharing social network and analysis environment for data scientists at [data.world](https://data.world/).  We are spending time here today.
+
+---------------
+
+Note that inline image links like the following only show images when rendered (not in the editor).  So **click on Preview->Preview Notebook** to generate a pretty version of these instructions.
+
+![data.world logo](https://i.imgur.com/a63WrYS.png)
+
+
+This guide contains some material from the guide found at https://data.world/nrippner/explore-the-data-world-r-sdk.  Look at that one for more complex queries and additional data.world functionality.
+  
+#### _Here we will introduce the data.world R package. While there's a lot more that the R package can do, the techniques below comprise the key functions you'll need to start doing work with data.world and R._ 
+
+#### **Agenda**:     
+1. Quickstart     
+2. Simple queries
+3. Merging dataframes / SQL tables
+4. Exercises
+
+----------------
+
+# 1. Quickstart
+
+### Installation
+
+Since the packages we want are not in the CRAN archive any longer, we have more work than normal to install.
+
+Install the following once; then you can comment out these lines.  Each one will install the named packages plus any dependencies needed.  
+```{r}
+#install.packages(c("httr","readr","rjson","xml2")) # these are prerequisites for dwapi package
+#install.packages(c("ini","miniUI","shiny")) # these are additional prerequisites for data.world package
+#install.packages("stringi") # sometimes needed, doesn't hurt to add
+```
+
+Install the following once; then you can comment out these lines.
+```{r}
+#install.packages("https://cran.r-project.org/src/contrib/Archive/dwapi/dwapi_0.1.3.1.tar.gz", repos=NULL, type="source")
+#install.packages("https://cran.r-project.org/src/contrib/Archive/data.world/data.world_1.2.2.tar.gz", repos=NULL, type="source")
+```
+
+Windows users might need to install the RTools package which you can download from https://cran.r-project.org/bin/windows/Rtools/ (the Rtools35.exe file is the installer).
+
+Now we can load the library (which automatically also loads the dwapi library)
+```{r}
+
+# load library
+library("data.world")
+
+```
+
+### Set up your account
+
+Start by visiting https://data.world/ and registering an account.  It's free.
+
+### Configuration
+
+This package requires a valid API authorization token to work.  
+Configuration can be provided in 3 forms:
+
+* Via config file
+* Via environment variables
+* At runtime
+
+Config files are the most convenient configuration method. Once saved, configuration will be automatically restored when the  `data.world` package is loaded.
+
+From the ***R console*** you'll want to run the two following commands below after replacing the string with your actual API token string (see instructions and image below the code box). 
+```{r configure, eval = FALSE}     
+saved_cfg <- data.world::save_config("eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJwcm9kLXVzZXItY2xpZW50OnJpc2hpZ3VtbWFrb25kYSIsImlzcyI6ImFnZW50OnJpc2hpZ3VtbWFrb25kYTo6YzIyNDkyNzEtY2ZiMC00MGYzLThhMTAtNDMxZDg0NGUxZDI0IiwiaWF0IjoxNjAwODYwMjA4LCJyb2xlIjpbInVzZXJfYXBpX3JlYWQiLCJ1c2VyX2FwaV93cml0ZSJdLCJnZW5lcmFsLXB1cnBvc2UiOnRydWUsInNhbWwiOnt9fQ.TB4XxyiWUwEbWiRDlm-ptPf5b_Luc1YzsUSC8u8PJUxtGULiA2AKoekcQGSX92Vn8a4oH04yimb_e-xTPdbk4A")    
+data.world::set_config(saved_cfg)    
+```
+
+For additional configuration options, see `?set_config`
+
+To find your API token string, visit: https://data.world/settings/advanced or **go to your data.world page, click on your profile picture in the top right, and choose Settings; then select Advanced (as shown in the image below)**, and you can paste the Read/Write API token in the code box above
+
+![](https://i.imgur.com/thdvW71.png)
+
+> *DO NOT SHARE YOUR AUTHENTICATION TOKEN*
+
+_For your security, do not include your API authentication token in code that is intended to be shared with others_
+
+---------------------
+
+   
+# 2. Simple queries
+
+Datasets on data.world can be queried using SQL and SPARQL. A specific dataset is the starting point for a query, but its not the end. The data in that dataset can be joined (merged) with data from any other dataset on the platform.
+
+If you are unfamiliar with or interested in learning more about SQL and SPARQL, check out data.world tutorials:
+
+* dwSQL: https://docs.data.world/tutorials/dwsql/
+* SPARQL: https://docs.data.world/tutorials/sparql/
+
+
+### (SQL)
+
+#### Inspecting the schema
+
+When using SQL, it's a good idea to start by understanding the schema inferred by data.world from the data that has been uploaded. That is done by querying the `Tables` table to learn what tables are available.
+
+```{r}
+intro_ds <- "https://data.world/jonloyens/an-intro-to-dataworld-dataset"
+tables_df <- data.world::query(
+  data.world::qry_sql("SELECT * FROM Tables"),
+  dataset = intro_ds
+)
+tables_df
+```
+
+So there are multiple tables available in this dataset.  It is also possible to obtain information about columns. For that, use the `TableColumns` table instead.
+
+Try:
+```{r}
+columns_df <- data.world::query(
+  data.world::qry_sql("SELECT * FROM TableColumns"),
+  dataset = intro_ds
+)
+columns_df
+```
+
+Now you can see what the column names for each table are, and sometimes a description of the column.
+
+#### Using SELECT queries to retrieve data
+
+Just like the queries above, any SQL query can be created using `qry_sql()`.  (For CSE160, you do not need to understand much of this SQL at all.)
+
+For example, we can retrieve and view the contents of tables:
+
+```{r SQL select team}
+team_query <- data.world::qry_sql(paste0(
+  "SELECT * ",
+  "FROM DataDotWorldBBallTeam "))
+
+team <- data.world::query(team_query, dataset = intro_ds)
+str(team)
+team
+```
+
+Now we know a little about the players on the team.  In the following code space, write the code to pull the contents of the statistics of this team, put it into a dataframe called *stats* and view it (just as we did above for *team* data).
+
+```{r SQL select stats}
+
+stats_query <- data.world::qry_sql(paste0(
+  "SELECT * ",
+  "FROM datadotworldbballstats "))
+
+stats <- data.world::query(stats_query, dataset = intro_ds)
+str(stats)
+stats
+
+```
+
+---------------------
+
+   
+# 3. Merging dataframes/tables
+
+You might have noticed that the two dataframes above have many player names in common.  Often, we will want to combine two dataframes when they have common row identifiers (so that we end up with a single dataframe that contains attributes from both of the original dataframes).
+
+For those of you know know SQL, you could do this for tables within a SQL query with a JOIN, as is done below (but if you don't want to think about SQL you can jump down to the R version):
+
+```{r SQL select}
+assists_vs_height <- data.world::qry_sql(paste0(
+  "SELECT t.Name, t.Height, s.AssistsPerGame ",
+  "FROM DataDotWorldBBallTeam as t ",
+  "JOIN DataDotWorldBBallStats as s ON t.Name = s.Name ",
+  "ORDER BY s.AssistsPerGame DESC"))
+
+data.world::query(assists_vs_height, dataset = intro_ds)
+```
+
+We can also do so in R, using the ***merge()*** command.  The first thing to figure out is which columns contain the common identifiers.  In this case, it is easy, as both dataframes contain columns with "name".
+
+```{r}
+#UNCOMMENT THE LINES BELOW
+merged_df <- merge(team, stats, by.x = "name", by.y = "name")
+merged_df
+```
+
+Note that the above code is commented out as it won't work unless you have successfully retrieved the table stats up at the end of Section 2.
+
+Notice how there are only 8 rows in the resulting dataframe, even though there were 9 rows in the *team* dataframe.  That's because one did not have a match in the *stats* dataframe, and it was therefore dropped.
+
+---------------------
+
+   
+# 4. Exercises
+
+#### Exploring company data
+
+Let's start by viewing what is in another dataset - a fictitious company.  I've given you the dataset below.
+```{r}
+companydataset <- "https://data.world/uci/wholesale-customers"
+
+# put your commands to see the tables and columns available in this dataset here:
+columns_df <- data.world::query(
+  data.world::qry_sql("SELECT * FROM TableColumns"),
+  dataset = companydataset
+)
+columns_df
+
+```
+
+#### Fetch company data
+
+Now fetch the only table into a dataframe, see how big it is with ***dim()***, and since it is too big to view, just display the first six rows using ***head()***.  Recall that the ***tail()*** function will show the last six rows if you want to see that instead.
+
+```{r}
+#THIS COMMENT LINE NEEDS TO BE REPLACED WITH YOUR CODE
+wholesalev_query <- data.world::qry_sql(paste0(
+  "SELECT * ",
+  "FROM wholesalev "))
+
+wholesalev <- data.world::query(wholesalev_query, dataset = companydataset)
+str(wholesalev)
+dim(wholesalev)
+head(wholesalev)
+wholesalev
+```
+
+#### Calculate total sales by region
+First, we'll need to calculate sales by region.  We have sales amounts for categories, and regions in the table.  How can we generate a dataframe that records total sales by region?
+
+```{r}
+#THIS COMMENT LINE NEEDS TO BE REPLACED WITH YOUR CODE
+df <- aggregate(.~region, data=wholesalev,FUN = sum)
+df$totalSales <- rowSums(df[,c(-1,-2)])
+df<-within(df, rm("channel"))
+df
+
+
+
+```
+
+#### Plot (using ggplot2) total sales by region
+
+Make a bar chart with qplot()
+`qplot(your_x_vector, your_y_vector, data=your_data_frame, geom="col")` for a column plot
+
+```{r}
+#THIS COMMENT LINE NEEDS TO BE REPLACED WITH YOUR CODE
+library(ggplot2)
+qplot(region, totalSales, data=df, geom="col")
+```
+
+
+--------------------
+
+# Documentation
+
+> _Note: when you install `data.world` you will also receive `dwapi`, a collection of R wrapper functions. Check out the documentation on CRAN to learn more._
+
+* [`"data.world"` documentation](https://cran.r-project.org/web/packages/data.world/data.world.pdf) (the main data.world R package - useful for configuring API authorizations and for executing SQL or SPARQL queries via R scripts)
+* [`"dwapi"` documentation](https://cran.r-project.org/web/packages/dwapi/dwapi.pdf) (a set of wrapper functions for data.world's REST API endpoints - *installed automatically when you call `install.packages("data.world")`*)
+
+
+Queries are a powerful feature and are a great tool for pulling and wrangling data.  For additional examples, check out data.world tutorials and published queries
+[here](https://data.world/jonloyens/an-intro-to-dataworld-dataset/query) and
+[here](https://data.world/jonloyens/intermediate-data-world/query).
+
+
+-------------------
+
+##### data.world support docs: https://help.data.world

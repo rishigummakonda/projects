@@ -1,0 +1,75 @@
+---
+title: "Lab17"
+author: "Rishi Gummakonda"
+date: "11/23/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+```{r }
+set.seed(1236)
+library(boot)
+data(law82, package="bootstrap")
+boot.t.ci <- function(x, B=500, R=100, level=0.95, statistic){
+  #compute the bootstrap t CI
+x <- as.matrix(x)
+n <- nrow(x)
+stat <- numeric(B)
+se <- numeric(B)
+boot.se <- function(x, R, f){
+#local function to compute the bootstrap #estimate of standard error for statistic f(x) \
+  x <- as.matrix(x)
+  m <- nrow(x)
+  th <- replicate(R, expr={
+      i <- sample(1:m, size=m, replace=T)
+      f(x[i,]) })
+    return(sd(th))
+  }
+
+for(b in 1:B){
+j <- sample(1:n, size=n, replace=T)
+y <- x[j,]
+stat[b] <- statistic(y)
+se[b] <- boot.se(y,R = R, f=statistic)
+}
+  statO <- statistic(x)
+  t.stats <- (stat-statO)/se
+  seO <- sd(stat)
+  alpha <- 1-level
+  Qt <- quantile(t.stats, c(alpha/2,1-alpha/2),type=1)
+  names(Qt) <- rev(names(Qt))
+  CI <- rev(statO-Qt*seO)
+}
+dat <- cbind(law82$LSAT,law82$GPA) 
+stat <- function(x,i){
+  cor(x[i,1],x[i,2])
+}
+ci <- boot.t.ci(dat,statistic = stat, B=2000, R=200)
+print(ci)
+```
+
+## Question 2
+
+```{r}
+set.seed(2346)
+data(law82, package = "bootstrap")
+n <- nrow(law82)
+y <- law82$LSAT
+z <- law82$GPA
+theta.hat <- mean(y)/mean(z) #compute the jackknife replicates 
+theta.jack <- numeric(n)
+for (i in 1:n) {
+  theta.jack[i] <- mean(y[-i])/mean(z[-i])
+}
+bias <- (n-1)*(mean(theta.jack)-theta.hat) #print jackknife estimate of bias 
+print(bias)
+#jackknife estimate of se
+se <- sqrt((n-1)*mean((theta.jack-mean(theta.jack))^2))
+print(se)
+```
+

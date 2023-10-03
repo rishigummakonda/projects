@@ -1,0 +1,118 @@
+---
+title: "CSE160: Time Series Examples"
+author: Brian D. Davison
+date: October 18, 2020 
+output: html_notebook
+---
+
+In this R Notebook, we consider some data science styles of analyzing time series data.
+
+============================================
+
+Let's get some timeseries data.  This is the number of births per month in New York city, from January 1946 to December 1959 (originally collected by Newton). This data is available in the file http://robjhyndman.com/tsdldata/data/nybirths.dat
+
+```{r}
+births <- scan("http://robjhyndman.com/tsdldata/data/nybirths.dat")
+birthstimeseries <- ts(births, frequency=12, start=c(1946,1))
+birthstimeseries
+```
+
+
+The samples of traditional analysis above is meant to try to build a model to explain the data that you have.  We can also build regression models of the form that we are familiar with: i.e., with items and features of those items and a target value.
+
+So let's work with the time series data to construct a dataset that we can use to train a model.  We'll start by creating a dataframe holding our target value.
+
+```{r}
+birthsdf <- data.frame(births=births)
+```
+
+As you've probably noticed (or read), the best prediction of tomorrow's weather is simply the weather for today.  We can do the same -- to predict the birth rate for a given month, we can look at the prior month's birth rate.
+
+```{r}
+birthsdf$Prior1[1] <- NA
+for (i in 2:length(births)) {
+  birthsdf$Prior1[i] <- birthsdf$births[i-1]
+}
+```
+
+However, from our prior analysis, we know there is a "seasonal" component to this analysis.  Perhaps we would want the one-year prior rate as another input?  
+
+```{r}
+for (i in 1:12) {
+  birthsdf$Prior12[i] <- NA
+}
+for (i in 13:length(births)) {
+  birthsdf$Prior12[i] <- birthsdf$births[i-12]
+}
+```
+
+It's also likely that we should provide a feature corresponding to time!
+
+```{r}
+birthsdf$id <- as.integer(rownames(birthsdf))
+```
+
+Track the month of the year
+
+```{r}
+birthsdf$month2 <- rep(c(1,2,3,4,5,6,7,8,9,10,11,12), times=14)
+```
+
+
+We may want to add prior months 2-11 (so that the model can see trends).  We can also add other features from other datasources (perhaps average temperature per month) that might be of value in our model.
+
+```{r}
+# average monthly high temperature (F) for NYC region
+# numbers are from https://www.timeanddate.com/weather/usa/new-york/climate
+avetemp <- c(40,42,50,62,72,80,85,84,76,64,54,44)
+birthsdf$temp <- rep(avetemp, times=14)
+```
+
+At this point, I would break the data into an initial training set and a test set (perhaps the first 80% and the last 20%). 
+
+```{r}
+rows <- dim(birthsdf)[1]
+rows
+
+train <- birthsdf[13:floor(12+(rows-12)*.8),]
+test <- birthsdf[-(1:floor(12+(rows-12)*.8)),]
+
+dim(train)
+dim(test)
+```
+
+Build a linear regression model using training test
+
+```{r}
+model <- glm(births ~ Prior1 + Prior12 + id + month2 + temp, data=train)
+summary(model)
+pred.value <- predict(model, test)
+
+```
+
+Evaluate on test set
+
+```{r}
+
+# make actuals_predicteds dataframe.
+actuals_preds <- data.frame(cbind(actuals=test$births, predicteds=pred.value))  
+correlation_accuracy <- cor(actuals_preds$actuals, actuals_preds$predicteds)  # 63.7%
+correlation_accuracy # want as high as possible
+
+#head(actuals_preds)
+
+mape <- mean(abs((actuals_preds$predicteds - actuals_preds$actuals))/actuals_preds$actuals)
+mape # 4.18% - want as low as possible
+mse <- mean((test$births-pred.value)^2)
+mse # 1.995 - want as low as possible
+```
+
+Try exploring with a subset of these features -- can get even better results!
+
+====================================
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).

@@ -1,0 +1,97 @@
+---
+title: "Gummakonda Homework 5"
+author: "Rishi Gummakonda"
+date: "10/8/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+```{r }
+m <- 10000
+x <- runif(m)
+theta.hat <- mean((1/(1+x^2))*(exp(-x^3/3))) 
+## print Monte Carlo estimate 
+print(theta.hat)
+```
+
+## Question 2 (6.1)
+
+
+```{r }
+
+m <- 10000
+x <- runif(m, min=0, max=(pi/3)) 
+theta.hat <- mean(sin(x))*(pi/3) 
+## print Monte Carlo estimate 
+print(theta.hat)
+
+actual = -cos(pi/3)+cos(0) 
+print(actual)
+```
+
+
+## Question 3 (6.4) 
+
+```{r}
+set.seed(1)
+m <- 10000
+beta_cdf <- function(x){
+  u <- runif(m,min=0,max=x)
+  y <- factorial(3+3-1)/(factorial(3-1)*factorial(3-1))*u^(3-1)*(1-u)^(3-1)
+  return(mean(x*y))
+}
+x <- seq(0.1,0.9,0.1) 
+for(j in x){
+  est <- beta_cdf(j)
+  actual <- pbeta(j,3,3)
+  print(c(j,est,actual))
+}
+```
+
+## Question 4
+
+```{r}
+#by sampling from uniform distribution
+m <- 10000
+x <- runif(m, min=0, max=0.8)
+theta.hat <- mean((1/sqrt(2*pi))*exp(-x^2/2))*(0.8) 
+#print Monte Carlo estimate
+print(theta.hat)
+
+
+#by sampling from standard normal distribution
+y <- rnorm(m)
+g <- (((1/sqrt(2*pi))*exp(-y^2/2))*(y>0)*(y<0.8))/((1/sqrt(2*pi))*exp(-y^2/2)) 
+theta.hat2 <- mean(g)
+
+#print Monte Carlo estimate
+print(theta.hat2)
+
+```
+
+
+## Question 5
+```{r}
+
+set.seed(1)
+m <- 10000
+beta_cdf <- function(x){
+  u <- runif(m,min=0,max=x)
+  y <- (u^(3-1))*(exp(-u/2))/(2^3)/factorial(3-1)
+  return(mean(x*y))
+}
+x <- seq(0.2,2.0,0.2)
+for(j in x){
+  est <- beta_cdf(j)
+  actual <- pgamma(q = j, shape = 3, scale = 2)
+  print(c(j,est,actual))
+}
+
+```
+
+

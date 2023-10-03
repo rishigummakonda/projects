@@ -1,0 +1,142 @@
+---
+title: "Homework-10"
+author: "Noah Backman"
+date: "11/30/2021"
+output: pdf_document
+---
+
+
+## Question 1
+Construct a histogram estimate of density for the buffalo dataset in the gss package using Sturges' Rule,
+Scott's Normal Reference Rule, and Freedman-Diaconis Rule. Which rule provides better density estimate?
+Compute the corresponding density estimates ^f(x) when x = 88 from the three histogram estimates.
+```{r}
+library(gss)
+data(buffalo)
+
+n = length(buffalo)
+# sturges
+# calc breaks according to Sturges' Rule
+nclass <- ceiling(1+log2(n))
+cwidth <- diff(range(buffalo)/nclass)
+breaks <- min(buffalo)+cwidth*0:nclass
+
+par(mfrow=c(1,3))
+h.sturges <- hist(buffalo, breaks=breaks, freq = F, main="hist: Sturges")
+
+
+# scotts
+
+# rounding the constant in Scott's rule
+# and using sample standard deviation to estimate sigma 
+h <- 3.5*sd(buffalo)*n^(-1/3)
+
+# nubmer of classes is determined by the range and h
+m <- min(buffalo)
+M <- max(buffalo)
+nclass <- ceiling((M-m)/h)
+breaks <- m+h*0:nclass
+
+h.scott <- hist(buffalo, breaks=breaks, freq=F, main="hist: Scotts")
+
+# freedman-diaconis
+breaks <- 2*IQR(buffalo) / n^(1/3)
+h.free <- hist(buffalo, breaks=, freq=F, main="hist: Freedman-Diaconis")
+
+
+```
+
+
+## Question 2 (12.4)
+Construct a frequency polygon density estimate for the precip dataset,
+using a bin width determined by substituting sigma = IQR/1.348 for 
+standard deviation in the usual Normal Reference Rule for a frequency polygon.
+```{r}
+library(ash)
+p <- data.frame(precip, 1:70)
+n <- length(precip)
+# freq poly bin width using normal ref rule
+h <- 2.15*(IQR(precip)/1.348)*n^(-1/5)
+
+# calculate the sequence of breaks and histogram
+br <- pretty(precip, diff(range(precip))/h)
+brplus <- c(min(br)-h, max(br+h))
+histg <- hist(precip, breaks=br, freq=F, main="",xlim=brplus)
+
+vx <- histg$mids # midpoints of each class interval
+vy <- histg$density # density est at vertices of polygon
+delta <- diff(vx)[1] # h after pretty is applied 
+k <- length(vx)
+vx <- vx+delta
+vx <- c(vx[1]-2*delta, vx[1]-delta, vx)
+vy <- c(0, vy, 0)
+# add the polygon to the histogram
+polygon(vx,vy)
+
+
+```
+
+
+## Question 3
+Construct an ASH density estimate for the faithful$eruptions dataset in R, using width h determined by
+the normal reference rule, set m = 15.
+```{r}
+# from Example 12.6 (ASH density estimate)
+library(MASS)
+precip <- faithful$eruptions
+n <- length(precip)
+m <- 15
+a <- min(precip) - 0.5
+b <- max(precip) + 0.5
+h <- h <- 3.5*sd(precip)*n^(-1/3)
+delta <- h/m
+
+# get the bin counts on the delta-width mesh
+br <- seq(a - delta*m, b + 2*delta*m, delta)
+histg <- hist(precip, breaks = br, plot = F)
+nk <- histg$counts
+K <- abs((1-m):(m-1))
+
+fhat <- function(x){
+  #locate the leftmost interval containing x
+  i <- max(which(x>br))
+  k <- (i-m+1):(i+m-1)
+  #get the 2m-1 bin counts centered at x
+  vk <- nk[k]
+  sum((1-K/m)*vk)/(n*h) #f.hat
+}
+
+# density can be computed at any points in range of data
+z <- as.matrix(seq(a,b+h, .1))
+f.ash <- apply(z, 1, fhat) #density estimates at midpts
+
+# plot ASH density estimate over histogram
+br2 <- seq(a, b+h, h)
+hist(precip, breaks = br2, freq=F, main="", ylim=c(0, max(f.ash)))
+lines(z, f.ash, xlab="precip")
+
+```
+
+
+## Question 4 (12.8)
+The buffalo dataset contains annual snowfall accumulations in Buffalo, New York 
+from 1910 to 1973. Construct kernel density estimates of the data using Gaussian
+and biweight kernels. Compare the estimates for different choices of bandwidth. 
+Is the estimate more influenced by the type of kernel or the bandwidth?
+```{r}
+library(gss)
+data(buffalo)
+
+h1 <- 1.06*sd(buffalo)*n^(-1/5)
+h2 <- 0.9*min(c(IQR(buffalo)/1.34,sd(buffalo)))*n^(-1/5)
+
+par(mfrow=c(2,2))
+plot(density(buffalo, kernel = "gaussian", bw=h1), main="Gaussian H1")
+plot(density(buffalo, kernel = "gaussian", bw=h2), main="Gaussian H2")
+plot(density(buffalo, kernel = "biweight", bw=h1), main="Biweight H1")
+plot(density(buffalo, kernel = "biweight", bw=h2), main="Biweight H2")
+
+
+```
+
+

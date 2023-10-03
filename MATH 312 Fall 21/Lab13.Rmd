@@ -1,0 +1,79 @@
+---
+title: "Lab13"
+author: "Rishi Gummakonda"
+date: "10/26/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+From Example 7.7
+```{r}
+##(Empirical Type I Error Rate)
+n <- 10
+alpha <- 0.1
+mu0 <- 100
+sigma <- 20
+
+m <- 10000  #number of replicates
+p <- numeric(m)  #storage for p-value
+for (j in 1:m){
+  x <- rnorm(n, mu0, sigma)
+  ttest <- t.test(x, alternative = "two.sided", mu=mu0)
+  p[j] <- ttest$p.value
+}
+
+p.hat <- mean(p < alpha)
+se.hat <- sqrt(p.hat*(1-p.hat)/m)
+print(c(p.hat,se.hat))
+
+
+```
+
+## Question 2
+From Example 7.9
+```{r}
+
+## Example 7.9 (Empirical Power)
+n <- 10
+alpha <- 0.1
+mu0 <- 100
+sigma <- 20
+
+
+mu <- seq(450,650,10) #alternatives
+M <- length(mu)
+power <- numeric(M)
+for( i in 1:M ){
+  mu1 <- mu[i]
+  pvalues <- replicate(m, expr = {
+    #simulate under alternative mu1
+    x <- rnorm(n,mean=mu1,sd=sigma)
+    ttest <- t.test(x,alternative="two.sided",mu=mu0)
+    ttest$p.value
+  })
+  power[i] <- mean(pvalues <= .05)
+}
+se <- sqrt(power*(1-power)/m)
+
+# plot the empirical power curve
+# adding vertical error bars at pi(theta) +/- 2se(pi(theta))
+
+library(ggplot2)
+df <- data.frame(mean=mu, power=power, upper=power+2*se, lower=power-2*se)
+ggplot(df,aes(x=mean,y=power)) +
+  geom_line()+
+  geom_vline(xintercept=500,lty=2) +
+  geom_hline(yintercept=c(0,.05),lty=1:2) +
+  geom_errorbar(aes(ymin=lower, ymax=upper), width=0.2, lwd=1.5)
+
+
+
+
+```
+
+
